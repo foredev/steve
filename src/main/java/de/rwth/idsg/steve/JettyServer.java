@@ -66,7 +66,7 @@ public class JettyServer {
     private static final int MAX_THREADS = 50;
 
     private static final long STOP_TIMEOUT = TimeUnit.SECONDS.toMillis(5);
-    private static final long IDLE_TIMEOUT = TimeUnit.MINUTES.toMillis(1);
+    private static final long IDLE_TIMEOUT = TimeUnit.MINUTES.toMillis(5);
 
     /**
      * A fully configured Jetty Server instance
