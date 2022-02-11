@@ -19,6 +19,7 @@
 package de.rwth.idsg.steve.service;
 
 import com.google.common.util.concurrent.Striped;
+import de.rwth.idsg.steve.SteveException;
 import de.rwth.idsg.steve.ocpp.OcppProtocol;
 import de.rwth.idsg.steve.ocpp.OcppTransport;
 import de.rwth.idsg.steve.ocpp.OcppVersion;
@@ -41,15 +42,9 @@ import ocpp.cs._2015._10.RegistrationStatus;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.socket.WebSocketSession;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.stream.Collectors;
 
@@ -89,6 +84,15 @@ public class ChargePointHelperService {
             return status;
         } finally {
             l.unlock();
+        }
+    }
+
+    public boolean isConnected(String chargeBoxId) {
+        try {
+            WebSocketSession session = ocpp16WebSocketEndpoint.getSession(chargeBoxId);
+            return session != null;
+        } catch (SteveException e) {
+            return false;
         }
     }
 
