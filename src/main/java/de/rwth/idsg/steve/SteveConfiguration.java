@@ -57,6 +57,7 @@ public enum SteveConfiguration {
     private final Auth auth;
     private final DB db;
     private final Jetty jetty;
+    private final Mqtt mqtt;
 
     SteveConfiguration() {
         PropertiesFileLoader p = new PropertiesFileLoader("main.properties");
@@ -99,6 +100,12 @@ public enum SteveConfiguration {
                    .wsSessionSelectStrategy(
                            WsSessionSelectStrategyEnum.fromName(p.getString("ws.session.select.strategy")))
                    .build();
+
+        mqtt = Mqtt.builder()
+                    .url(p.getString("mqtt.url"))
+                    .username(p.getString("mqtt.username"))
+                    .password(p.getString("mqtt.password"))
+                    .build();
 
         validate();
     }
@@ -187,6 +194,13 @@ public enum SteveConfiguration {
     public static class Ocpp {
         private final boolean autoRegisterUnknownStations;
         private final WsSessionSelectStrategy wsSessionSelectStrategy;
+    }
+
+    @Builder @Getter
+    public static class Mqtt {
+        private final String url;
+        private final String username;
+        private final String password;
     }
 
 }
