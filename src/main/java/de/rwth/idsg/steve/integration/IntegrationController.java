@@ -1,5 +1,6 @@
 package de.rwth.idsg.steve.integration;
 
+import de.rwth.idsg.steve.integration.dto.EnergyMeterData;
 import de.rwth.idsg.steve.integration.dto.LimitPowerRequest;
 import de.rwth.idsg.steve.integration.dto.LimitPowerResponse;
 import de.rwth.idsg.steve.ocpp.OcppTransport;
@@ -40,14 +41,16 @@ public class IntegrationController {
     private final TransactionRepository transactionRepository;
     private final ChargePointService12_Client client12;
     private final ChargePointService16_Client client16;
+    private final MqttService mqttService;
 
-    public IntegrationController(ChargePointRepository chargePointRepository, ChargingProfileRepository chargingProfileRepository, ChargePointHelperService chargePointHelperService, TransactionRepository transactionRepository, @Qualifier("ChargePointService12_Client") ChargePointService12_Client client12, @Qualifier("ChargePointService16_Client") ChargePointService16_Client client16) {
+    public IntegrationController(ChargePointRepository chargePointRepository, ChargingProfileRepository chargingProfileRepository, ChargePointHelperService chargePointHelperService, TransactionRepository transactionRepository, @Qualifier("ChargePointService12_Client") ChargePointService12_Client client12, @Qualifier("ChargePointService16_Client") ChargePointService16_Client client16, MqttService mqttService) {
         this.chargePointRepository = chargePointRepository;
         this.chargingProfileRepository = chargingProfileRepository;
         this.chargePointHelperService = chargePointHelperService;
         this.transactionRepository = transactionRepository;
         this.client12 = client12;
         this.client16 = client16;
+        this.mqttService = mqttService;
     }
 
     @RequestMapping(value = "/{chargePointId}", method = RequestMethod.POST)
@@ -60,6 +63,19 @@ public class IntegrationController {
         chargePointRepository.addChargePointList(Collections.singletonList(chargePointId));
         chargePointHelperService.removeUnknown(chargePointId);
         return ResponseEntity.ok(chargePointId);
+    }
+
+    @RequestMapping(value = "/mqtt-test", method = RequestMethod.POST)
+    public ResponseEntity<Boolean> mqttTest() {
+        EnergyMeterData energyMeterData = new EnergyMeterData();
+        energyMeterData.setEnergy(10000);
+        energyMeterData.setPower(3700);
+        energyMeterData.setFrequency(49.985);
+        energyMeterData.setCurrent(List.of(16.0, 16.0, 16.0));
+        energyMeterData.setVoltage(List.of(220.0, 220.0, 220.0));
+
+        mqttService.publishEnergyMeterData("9082359785", "1", energyMeterData);
+        return ResponseEntity.ok(true);
     }
 
     @RequestMapping(value = "/{chargeBoxId}/limitpower", method = RequestMethod.POST)
