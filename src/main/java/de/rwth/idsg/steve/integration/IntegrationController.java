@@ -169,15 +169,20 @@ public class IntegrationController {
         return ResponseEntity.ok(true);
     }
 
-    @RequestMapping(value = "/{chargePointId}/{connectorId}/transaction", method = RequestMethod.GET)
-    public ResponseEntity<Boolean> startTransaction(@PathVariable String chargePointId, @PathVariable int connectorId) {
+    @RequestMapping(value = "/{chargeBoxId}/{connectorId}/transaction", method = RequestMethod.GET)
+    public ResponseEntity<Boolean> startTransaction(@PathVariable String chargeBoxId, @PathVariable int connectorId) {
+        List<ChargePointSelect> chargePointSelectList = new ArrayList<>();
+        ChargePointSelect chargePointSelect = new ChargePointSelect(OcppTransport.JSON, chargeBoxId);
+        chargePointSelectList.add(chargePointSelect);
+
         RemoteStartTransactionParams params = new RemoteStartTransactionParams();
+        params.setChargePointSelectList(chargePointSelectList);
         params.setConnectorId(connectorId);
         params.setIdTag("999999"); // default id tag on the charge amps box
 
         int taskId = client16.remoteStartTransaction(params);
 
-        log.debug("[chargeBoxId={}, connectionId={}, idTag={}, taskId={}] Remote start transaction", chargePointId, 1, 999999, taskId);
+        log.debug("[chargeBoxId={}, connectionId={}, idTag={}, taskId={}] Remote start transaction", chargeBoxId, 1, 999999, taskId);
         return ResponseEntity.ok(true);
     }
 }
