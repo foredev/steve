@@ -31,6 +31,7 @@ public class IntegrationServiceImpl implements IntegrationService {
             data.setVoltage(voltage);
             data.setCurrent(currentImport);
             data.setPower(getPower(currentImport, voltage));
+            data.setTimestamp(meterValue.getTimestamp().toDate());
 
             Optional<Double> energy = getEnergy(sampledValues);
             energy.ifPresent(data::setEnergy);

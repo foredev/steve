@@ -8,8 +8,9 @@ import de.rwth.idsg.steve.repository.ChargePointRepository;
 import de.rwth.idsg.steve.repository.ChargingProfileRepository;
 import de.rwth.idsg.steve.repository.TransactionRepository;
 import de.rwth.idsg.steve.repository.dto.ChargePointSelect;
+import de.rwth.idsg.steve.repository.dto.Transaction;
+import de.rwth.idsg.steve.repository.dto.TransactionDetails;
 import de.rwth.idsg.steve.service.ChargePointHelperService;
-import de.rwth.idsg.steve.service.ChargePointService12_Client;
 import de.rwth.idsg.steve.service.ChargePointService16_Client;
 import de.rwth.idsg.steve.web.dto.ChargingProfileForm;
 import de.rwth.idsg.steve.web.dto.ocpp.RemoteStartTransactionParams;
@@ -26,6 +27,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
 import java.util.*;
 
@@ -39,16 +41,14 @@ public class IntegrationController {
     private final ChargingProfileRepository chargingProfileRepository;
     private final ChargePointHelperService chargePointHelperService;
     private final TransactionRepository transactionRepository;
-    private final ChargePointService12_Client client12;
     private final ChargePointService16_Client client16;
     private final MqttService mqttService;
 
-    public IntegrationController(ChargePointRepository chargePointRepository, ChargingProfileRepository chargingProfileRepository, ChargePointHelperService chargePointHelperService, TransactionRepository transactionRepository, @Qualifier("ChargePointService12_Client") ChargePointService12_Client client12, @Qualifier("ChargePointService16_Client") ChargePointService16_Client client16, MqttService mqttService) {
+    public IntegrationController(ChargePointRepository chargePointRepository, ChargingProfileRepository chargingProfileRepository, ChargePointHelperService chargePointHelperService, TransactionRepository transactionRepository, @Qualifier("ChargePointService16_Client") ChargePointService16_Client client16, MqttService mqttService) {
         this.chargePointRepository = chargePointRepository;
         this.chargingProfileRepository = chargingProfileRepository;
         this.chargePointHelperService = chargePointHelperService;
         this.transactionRepository = transactionRepository;
-        this.client12 = client12;
         this.client16 = client16;
         this.mqttService = mqttService;
     }
@@ -129,30 +129,53 @@ public class IntegrationController {
         return chargingProfileRepository.add(form);
     }
 
-    @RequestMapping(value = "/{chargePointId}/transaction", method = RequestMethod.DELETE)
-    public ResponseEntity<Boolean> stopActiveTransaction(@PathVariable String chargePointId) {
-        List<Integer> activeTransactionIds = transactionRepository.getActiveTransactionIds(chargePointId);
+    @RequestMapping(value = "/{chargeBoxId}/{connectorId}/transaction", method = RequestMethod.DELETE)
+    public ResponseEntity<Boolean> stopActiveTransaction(@PathVariable String chargeBoxId, @PathVariable int connectorId, HttpServletRequest request) {
+        List<Integer> activeTransactionIds = transactionRepository.getActiveTransactionIds(chargeBoxId);
 
         if (activeTransactionIds.isEmpty()) {
+            log.info("No active transactions for charge box {} and connector {}", chargeBoxId, connectorId);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
 
-        RemoteStopTransactionParams params = new RemoteStopTransactionParams();
-        Integer transactionId = activeTransactionIds.get(0);
-        params.setTransactionId(transactionId);
-        int taskId = client12.remoteStopTransaction(params);
+        List<Transaction> transactions = new ArrayList<>();
+        for (Integer activeTransactionId : activeTransactionIds) {
+            TransactionDetails details = transactionRepository.getDetails(activeTransactionId);
+            transactions.add(details.getTransaction());
+        }
 
-        log.debug("[chargeBoxId={}, transactionId={}, taskId={}] Remote stop transaction", chargePointId, transactionId, taskId);
+        Optional<Transaction> optionalTransaction = transactions
+                .stream()
+                .filter(transaction -> transaction.getConnectorId() == connectorId)
+                .findFirst();
+
+        if (optionalTransaction.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+        Transaction transaction = optionalTransaction.get();
+        log.info("Transaction selected: {}", transaction.getId());
+
+        List<ChargePointSelect> chargePointSelectList = new ArrayList<>();
+        ChargePointSelect chargePointSelect = new ChargePointSelect(OcppTransport.JSON, chargeBoxId);
+        chargePointSelectList.add(chargePointSelect);
+
+        RemoteStopTransactionParams params = new RemoteStopTransactionParams();
+        params.setTransactionId(transaction.getId());
+        params.setChargePointSelectList(chargePointSelectList);
+
+        int taskId = client16.remoteStopTransaction(params);
+
+        log.info("[chargeBoxId={}, transactionId={}, taskId={}] Remote stop transaction", chargeBoxId, transaction.getId(), taskId);
         return ResponseEntity.ok(true);
     }
 
-    @RequestMapping(value = "/{chargePointId}/transaction", method = RequestMethod.PUT)
-    public ResponseEntity<Boolean> startTransaction(@PathVariable String chargePointId) {
+    @RequestMapping(value = "/{chargePointId}/{connectorId}/transaction", method = RequestMethod.GET)
+    public ResponseEntity<Boolean> startTransaction(@PathVariable String chargePointId, @PathVariable int connectorId) {
         RemoteStartTransactionParams params = new RemoteStartTransactionParams();
-        params.setConnectorId(1);
+        params.setConnectorId(connectorId);
         params.setIdTag("999999"); // default id tag on the charge amps box
 
-        int taskId = client12.remoteStartTransaction(params);
+        int taskId = client16.remoteStartTransaction(params);
 
         log.debug("[chargeBoxId={}, connectionId={}, idTag={}, taskId={}] Remote start transaction", chargePointId, 1, 999999, taskId);
         return ResponseEntity.ok(true);

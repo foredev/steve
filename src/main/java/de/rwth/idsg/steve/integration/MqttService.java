@@ -2,6 +2,8 @@ package de.rwth.idsg.steve.integration;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.util.StdDateFormat;
 import de.rwth.idsg.steve.SteveConfiguration;
 import de.rwth.idsg.steve.integration.dto.EnergyMeterData;
 import de.rwth.idsg.steve.ocpp.ws.JsonObjectMapper;
@@ -20,6 +22,9 @@ public class MqttService {
     private final ObjectMapper mapper = JsonObjectMapper.INSTANCE.getMapper();
 
     public MqttService() {
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        mapper.setDateFormat(new StdDateFormat().withColonInTimeZone(true));
+
         SteveConfiguration.Mqtt mqttConfig = SteveConfiguration.CONFIG.getMqtt();
 
         try {
@@ -54,18 +59,6 @@ public class MqttService {
             log.error("Failed to serialize energy meter data", e);
         } catch (MqttException e) {
             log.error("Failed to publish energy meter data to mqtt broker", e);
-        }
-    }
-
-    public void publishMessage(String topic, String message) {
-        MqttMessage mqttMessage = new MqttMessage(message.getBytes(StandardCharsets.UTF_8));
-        mqttMessage.setQos(0);
-        mqttMessage.setRetained(false);
-
-        try {
-            mqttClient.publish(topic, mqttMessage);
-        } catch (MqttException e) {
-            e.printStackTrace();
         }
     }
 }
