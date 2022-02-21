@@ -9,6 +9,7 @@ import de.rwth.idsg.steve.integration.dto.EnergyMeterData;
 import de.rwth.idsg.steve.ocpp.ws.JsonObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.paho.client.mqttv3.*;
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -28,7 +29,9 @@ public class MqttService {
         SteveConfiguration.Mqtt mqttConfig = SteveConfiguration.CONFIG.getMqtt();
 
         try {
-            mqttClient = new MqttClient(mqttConfig.getUrl(), UUID.randomUUID().toString());
+            MemoryPersistence memoryPersistence = new MemoryPersistence();
+
+            mqttClient = new MqttClient(mqttConfig.getUrl(), UUID.randomUUID().toString(), memoryPersistence);
 
             MqttConnectOptions options = new MqttConnectOptions();
             options.setAutomaticReconnect(true);
