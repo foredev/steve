@@ -18,6 +18,7 @@
  */
 package de.rwth.idsg.steve.service;
 
+import de.rwth.idsg.steve.integration.IntegrationService;
 import de.rwth.idsg.steve.ocpp.OcppProtocol;
 import de.rwth.idsg.steve.repository.OcppServerRepository;
 import de.rwth.idsg.steve.repository.SettingsRepository;
@@ -72,6 +73,8 @@ public class CentralSystemService16_Service {
     @Autowired private OcppTagService ocppTagService;
     @Autowired private NotificationService notificationService;
     @Autowired private ChargePointHelperService chargePointHelperService;
+
+    @Autowired private IntegrationService integrationService;
 
     public BootNotificationResponse bootNotification(BootNotificationRequest parameters, String chargeBoxIdentity,
                                                      OcppProtocol ocppProtocol) {
@@ -152,6 +155,8 @@ public class CentralSystemService16_Service {
                 parameters.getConnectorId(),
                 parameters.getTransactionId()
         );
+
+        integrationService.meterValues(chargeBoxIdentity, parameters);
 
         return new MeterValuesResponse();
     }

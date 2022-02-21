@@ -116,13 +116,22 @@ public class SteveAppContext {
         ctx.addServlet(web, CONFIG.getSpringMapping());
         ctx.addServlet(cxf, CONFIG.getCxfMapping());
 
+        // If PROD, add security filters
         if (CONFIG.getProfile().isProd()) {
-            // If PROD, add security filter
+            // /manager/* filter
             ctx.addFilter(
-                // The bean name is not arbitrary, but is as expected by Spring
-                new FilterHolder(new DelegatingFilterProxy(AbstractSecurityWebApplicationInitializer.DEFAULT_FILTER_NAME)),
-                CONFIG.getSpringManagerMapping(),
-                EnumSet.allOf(DispatcherType.class)
+                    // The bean name is not arbitrary, but is as expected by Spring
+                    new FilterHolder(new DelegatingFilterProxy(AbstractSecurityWebApplicationInitializer.DEFAULT_FILTER_NAME)),
+                    CONFIG.getSpringManagerMapping(),
+                    EnumSet.allOf(DispatcherType.class)
+            );
+
+            // /api/* filter
+            ctx.addFilter(
+                    // The bean name is not arbitrary, but is as expected by Spring
+                    new FilterHolder(new DelegatingFilterProxy(AbstractSecurityWebApplicationInitializer.DEFAULT_FILTER_NAME)),
+                    CONFIG.getApiMapping(),
+                    EnumSet.allOf(DispatcherType.class)
             );
         }
 

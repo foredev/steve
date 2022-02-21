@@ -22,6 +22,7 @@ import de.rwth.idsg.steve.SteveProdCondition;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
@@ -36,7 +37,6 @@ import static de.rwth.idsg.steve.SteveConfiguration.CONFIG;
  * @author Sevket Goekay <sevketgokay@gmail.com>
  * @since 07.01.2015
  */
-@Configuration
 @EnableWebSecurity
 @Conditional(SteveProdCondition.class)
 public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
@@ -54,34 +54,55 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
             .passwordEncoder(CONFIG.getAuth().getPasswordEncoder())
             .withUser(CONFIG.getAuth().getUserName())
             .password(CONFIG.getAuth().getEncodedPassword())
-            .roles("ADMIN");
+            .roles("ADMIN")
+        .and()
+            .withUser(CONFIG.getApiAuth().getUserName())
+            .password(CONFIG.getApiAuth().getEncodedPassword())
+            .roles("API_INTEGRATION");
     }
 
-    @Override
-    public void configure(WebSecurity web) {
-        web.ignoring()
-           .antMatchers("/static/**")
-           .antMatchers("/views/**");
+    @Configuration
+    @Order(1)
+    public static class ApiWebSecurityConfigurationAdapter extends WebSecurityConfigurerAdapter {
+        protected void configure(HttpSecurity http) throws Exception {
+            http
+                    .csrf().disable()
+                    .antMatcher("/api/**")
+                    .authorizeRequests(authorize -> authorize
+                            .anyRequest().hasRole("API_INTEGRATION")
+                    )
+                    .httpBasic();
+        }
     }
 
-    @Override
-    protected void configure(HttpSecurity http) throws Exception {
-        final String prefix = "/manager/";
-        http
-            .authorizeRequests()
-                .antMatchers(prefix + "**").hasRole("ADMIN")
-                .and()
-            .sessionManagement()
-                .invalidSessionUrl(prefix + "signin")
-                .and()
-            .formLogin()
-                .loginPage(prefix + "signin")
-                .permitAll()
-                .and()
-            .logout()
-                .logoutUrl(prefix + "signout")
-                .and()
-            .httpBasic();
-    }
+    @Configuration
+    @Order(2)
+    public static class FormLoginWebSecurityConfigurerAdapter extends WebSecurityConfigurerAdapter {
+        @Override
+        public void configure(WebSecurity web) {
+            web.ignoring()
+                    .antMatchers("/static/**")
+                    .antMatchers("/views/**");
+        }
 
+        @Override
+        protected void configure(HttpSecurity http) throws Exception {
+            final String prefix = "/manager/";
+            http
+                    .authorizeRequests()
+                    .antMatchers(prefix + "**").hasRole("ADMIN")
+                    .and()
+                    .sessionManagement()
+                    .invalidSessionUrl(prefix + "signin")
+                    .and()
+                    .formLogin()
+                    .loginPage(prefix + "signin")
+                    .permitAll()
+                    .and()
+                    .logout()
+                    .logoutUrl(prefix + "signout")
+                    .and()
+                    .httpBasic();
+        }
+    }
 }

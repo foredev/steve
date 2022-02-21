@@ -40,6 +40,8 @@ public enum SteveConfiguration {
     private final String springManagerMapping = "/manager/*";
     // Mapping for CXF SOAP services
     private final String cxfMapping = "/services/*";
+    // Mapping for integration API
+    private final String apiMapping = "/api/*";
     // Dummy service path
     private final String routerEndpointPath = "/CentralSystemService";
     // Time zone for the application and database connections
@@ -55,8 +57,10 @@ public enum SteveConfiguration {
     private final ApplicationProfile profile;
     private final Ocpp ocpp;
     private final Auth auth;
+    private final Auth apiAuth;
     private final DB db;
     private final Jetty jetty;
+    private final Mqtt mqtt;
 
     SteveConfiguration() {
         PropertiesFileLoader p = new PropertiesFileLoader("main.properties");
@@ -89,16 +93,28 @@ public enum SteveConfiguration {
         PasswordEncoder encoder = new BCryptPasswordEncoder();
 
         auth = Auth.builder()
-                   .passwordEncoder(encoder)
-                   .userName(p.getString("auth.user"))
-                   .encodedPassword(encoder.encode(p.getString("auth.password")))
-                   .build();
+                .passwordEncoder(encoder)
+                .userName(p.getString("auth.user"))
+                .encodedPassword(encoder.encode(p.getString("auth.password")))
+                .build();
+
+        apiAuth = Auth.builder()
+                .passwordEncoder(encoder)
+                .userName(p.getString("api.user"))
+                .encodedPassword(encoder.encode(p.getString("api.password")))
+                .build();
 
         ocpp = Ocpp.builder()
                    .autoRegisterUnknownStations(p.getOptionalBoolean("auto.register.unknown.stations"))
                    .wsSessionSelectStrategy(
                            WsSessionSelectStrategyEnum.fromName(p.getString("ws.session.select.strategy")))
                    .build();
+
+        mqtt = Mqtt.builder()
+                    .url(p.getString("mqtt.url"))
+                    .username(p.getString("mqtt.username"))
+                    .password(p.getString("mqtt.password"))
+                    .build();
 
         validate();
     }
@@ -187,6 +203,13 @@ public enum SteveConfiguration {
     public static class Ocpp {
         private final boolean autoRegisterUnknownStations;
         private final WsSessionSelectStrategy wsSessionSelectStrategy;
+    }
+
+    @Builder @Getter
+    public static class Mqtt {
+        private final String url;
+        private final String username;
+        private final String password;
     }
 
 }
