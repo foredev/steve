@@ -63,7 +63,7 @@ public class SettingsRepositoryImpl implements SettingsRepository {
         List<NotificationFeature> features = splitFeatures(r.getNotificationFeatures());
 
         return SettingsForm.builder()
-                           .heartbeat(toMin(r.getHeartbeatIntervalInSeconds()))
+                           .heartbeat(r.getHeartbeatIntervalInSeconds())
                            .expiration(r.getHoursToExpire())
                            .enabled(r.getMailEnabled())
                            .host(r.getMailHost())
@@ -115,7 +115,7 @@ public class SettingsRepositoryImpl implements SettingsRepository {
 
         try {
             ctx.update(SETTINGS)
-               .set(SETTINGS.HEARTBEAT_INTERVAL_IN_SECONDS, toSec(form.getHeartbeat()))
+               .set(SETTINGS.HEARTBEAT_INTERVAL_IN_SECONDS, form.getHeartbeat())
                .set(SETTINGS.HOURS_TO_EXPIRE, form.getExpiration())
                .set(SETTINGS.MAIL_ENABLED, form.getEnabled())
                .set(SETTINGS.MAIL_HOST, form.getHost())
