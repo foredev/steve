@@ -1,8 +1,8 @@
 package de.rwth.idsg.steve.integration;
 
 import de.rwth.idsg.steve.integration.dto.EnergyMeterData;
-import de.rwth.idsg.steve.integration.dto.LimitPowerRequest;
-import de.rwth.idsg.steve.integration.dto.LimitPowerResponse;
+import de.rwth.idsg.steve.integration.dto.ChargingLimitRequest;
+import de.rwth.idsg.steve.integration.dto.ChargingLimitResponse;
 import de.rwth.idsg.steve.ocpp.OcppTransport;
 import de.rwth.idsg.steve.repository.ChargePointRepository;
 import de.rwth.idsg.steve.repository.ChargingProfileRepository;
@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import ocpp.cp._2015._10.ChargingProfileKindType;
 import ocpp.cp._2015._10.ChargingProfilePurposeType;
 import ocpp.cp._2015._10.ChargingRateUnitType;
+import org.joda.time.LocalDateTime;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -78,19 +79,18 @@ public class IntegrationController {
         return ResponseEntity.ok(true);
     }
 
-    @RequestMapping(value = "/{chargeBoxId}/limitpower", method = RequestMethod.POST)
-    public ResponseEntity<LimitPowerResponse> limitPower(@PathVariable String chargeBoxId, @RequestBody LimitPowerRequest request) {
-
+    @RequestMapping(value = "/{chargeBoxId}/{connectorId}/charginglimit", method = RequestMethod.POST)
+    public ResponseEntity<ChargingLimitResponse> setChargingLimit(@PathVariable String chargeBoxId, @PathVariable int connectorId, @RequestBody ChargingLimitRequest request) {
         boolean connected = chargePointHelperService.isConnected(chargeBoxId);
         if (!connected) {
             log.warn("Charge box " + chargeBoxId + " is not connected");
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new LimitPowerResponse(false, "Charge box " + chargeBoxId + " is not connected"));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ChargingLimitResponse(false, "Charge box " + chargeBoxId + " is not connected"));
         }
 
         List<Integer> activeTransactionIds = transactionRepository.getActiveTransactionIds(chargeBoxId);
         if (activeTransactionIds.isEmpty()) {
             log.warn("No active transaction for chargeBoxId " + chargeBoxId);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new LimitPowerResponse(false, "No active transaction for chargeBoxId " + chargeBoxId));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ChargingLimitResponse(false, "No active transaction for chargeBoxId " + chargeBoxId));
         }
 
         int chargingProfileId = addChargingProfile(request);
@@ -102,24 +102,25 @@ public class IntegrationController {
 
         SetChargingProfileParams params = new SetChargingProfileParams();
         params.setChargePointSelectList(chargePointSelectList);
-        params.setConnectorId(1);
+        params.setConnectorId(connectorId);
         params.setChargingProfilePk(chargingProfileId);
 
         client16.setChargingProfile(params);
 
-        return ResponseEntity.ok(new LimitPowerResponse(true));
+        return ResponseEntity.ok(new ChargingLimitResponse(true));
     }
 
-    private int addChargingProfile(LimitPowerRequest request) {
+    private int addChargingProfile(ChargingLimitRequest request) {
         ChargingProfileForm form = new ChargingProfileForm();
         form.setStackLevel(1);
         form.setChargingProfilePurpose(ChargingProfilePurposeType.TX_PROFILE);
         form.setChargingProfileKind(ChargingProfileKindType.ABSOLUTE);
-        form.setChargingRateUnit(ChargingRateUnitType.W);
+        form.setChargingRateUnit(request.getUnit().equals("W") ? ChargingRateUnitType.W : ChargingRateUnitType.A);
+        form.setStartSchedule(LocalDateTime.now());
 
         ChargingProfileForm.SchedulePeriod schedulePeriod = new ChargingProfileForm.SchedulePeriod();
         schedulePeriod.setStartPeriodInSeconds(0);
-        schedulePeriod.setPowerLimit(BigDecimal.valueOf(request.getPowerLimitInWatt()));
+        schedulePeriod.setPowerLimit(BigDecimal.valueOf(request.getLimit()));
 
         Map<String, ChargingProfileForm.SchedulePeriod> schedulePeriodMap = new HashMap<>();
         schedulePeriodMap.put("first", schedulePeriod);

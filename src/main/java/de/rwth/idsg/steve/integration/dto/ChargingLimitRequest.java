@@ -5,6 +5,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class LimitPowerRequest {
-    private int powerLimitInWatt;
+public class ChargingLimitRequest {
+    private double limit;
+    private String unit;
 }

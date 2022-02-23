@@ -5,15 +5,15 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class LimitPowerResponse {
+public class ChargingLimitResponse {
     private boolean success;
     private String error;
 
-    public LimitPowerResponse(boolean success) {
+    public ChargingLimitResponse(boolean success) {
         this.success = success;
     }
 
-    public LimitPowerResponse(boolean success, String error) {
+    public ChargingLimitResponse(boolean success, String error) {
         this.success = success;
         this.error = error;
     }
