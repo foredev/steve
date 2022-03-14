@@ -16,38 +16,19 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package de.rwth.idsg.steve.utils;
+package de.rwth.idsg.steve.ocpp;
 
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
-import lombok.experimental.UtilityClass;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+public class OcppProtocolTest {
 
-import static de.rwth.idsg.steve.utils.CountryCodesProvider.getCountryCodes;
-
-/**
- * @author Sevket Goekay <sevketgokay@gmail.com>
- * @since 25.11.2015
- */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
-public final class ControllerHelper {
-
-    public static final String EMPTY_OPTION = "-- Empty --";
-
-    public static final Map<String, String> COUNTRY_DROPDOWN = getCountryCodes();
-
-    public static Map<String, String> idTagEnhancer(List<String> idTagList) {
-        Map<String, String> map = new HashMap<>(idTagList.size() + 1);
-        map.put("", EMPTY_OPTION);
-
-        for (String s : idTagList) {
-            map.put(s, s);
-        }
-        return map;
+    @ParameterizedTest
+    @EnumSource(OcppProtocol.class)
+    public void testFromCompositeValue(OcppProtocol input) {
+        String toTest = input.getCompositeValue();
+        OcppProtocol inputBack = OcppProtocol.fromCompositeValue(toTest);
+        Assertions.assertEquals(input, inputBack);
     }
-
-
 }
