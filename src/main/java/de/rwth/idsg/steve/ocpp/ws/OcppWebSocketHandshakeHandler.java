@@ -67,6 +67,11 @@ public class OcppWebSocketHandshakeHandler implements HandshakeHandler {
         // -------------------------------------------------------------------------
 
         String chargeBoxId = getLastBitFromUrl(request.getURI().getPath());
+
+        if (chargeBoxId.startsWith("CentralSystemService")) {
+            chargeBoxId = chargeBoxId.replace("CentralSystemService", "");
+        }
+
         Optional<RegistrationStatus> status = chargePointHelperService.getRegistrationStatus(chargeBoxId);
 
         // Allow connections, if station is in db (registration_status field from db does not matter)

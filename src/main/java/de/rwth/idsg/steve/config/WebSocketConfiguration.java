@@ -63,7 +63,7 @@ public class WebSocketConfiguration implements WebSocketConfigurer {
             chargePointHelperService
         );
 
-        registry.addHandler(handshakeHandler.getDummyWebSocketHandler(), "/websocket/CentralSystemService/*")
+        registry.addHandler(handshakeHandler.getDummyWebSocketHandler(), "/websocket/CentralSystemService/*", "/websocket/CentralSystemService*")
                 .setHandshakeHandler(handshakeHandler)
                 .setAllowedOrigins("*");
     }
