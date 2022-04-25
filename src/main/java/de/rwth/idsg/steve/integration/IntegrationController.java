@@ -51,8 +51,8 @@ public class IntegrationController {
         OK,
         NOK,
         STARTED,
-        NOTSTARTED,
-        ALREADYSTARTED,
+        NOT_STARTED,
+        ALREADY_STARTED,
         ERROR
     }
     public IntegrationController(ChargePointRepository chargePointRepository, ChargingProfileRepository chargingProfileRepository, ChargePointHelperService chargePointHelperService, TransactionRepository transactionRepository, @Qualifier("ChargePointService16_Client") ChargePointService16_Client client16, MqttService mqttService) {
@@ -203,7 +203,7 @@ public class IntegrationController {
         form.setChargeBoxId(chargeBoxId);
         List<ChargePoint.Overview> chargeBoxOverview = chargePointRepository.getOverview(form);
 
-        if(chargeBoxOverview.isEmpty()) {
+        if (chargeBoxOverview.isEmpty()) {
             log.debug("[chargeBoxId={}] Charge box id not found in overview information", chargeBoxId);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }

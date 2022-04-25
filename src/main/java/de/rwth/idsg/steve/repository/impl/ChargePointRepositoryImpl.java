@@ -114,8 +114,8 @@ public class ChargePointRepositoryImpl implements ChargePointRepository {
                         .ocppProtocol(r.value4())
                         .lastHeartbeatTimestampDT(r.value5())
                         .lastHeartbeatTimestamp(DateTimeUtils.humanize(r.value5()))
-                        .fw_version(r.value6())
-                        .fw_update_status(DateTimeUtils.humanize(r.value7()))
+                        .fwVersion(r.value6())
+                        .fwUpdateStatus(DateTimeUtils.humanize(r.value7()))
                         .build()
                 );
     }
@@ -174,7 +174,7 @@ public class ChargePointRepositoryImpl implements ChargePointRepository {
                 throw new SteveException("Unknown enum type");
         }
 
-        if(form.isSetFwVersion()) {
+        if (form.isSetFwVersion()) {
             selectQuery.addConditions(includes(CHARGE_BOX.FW_VERSION, form.getFwVersion()));
         }
 
