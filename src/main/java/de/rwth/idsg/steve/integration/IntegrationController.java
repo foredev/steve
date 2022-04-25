@@ -205,7 +205,7 @@ public class IntegrationController {
 
         if(chargeBoxOverview.isEmpty()) {
             log.debug("[chargeBoxId={}] Charge box id not found in overview information", chargeBoxId);
-            return ResponseEntity.badRequest().body(null);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
 
         return ResponseEntity.ok().body(chargeBoxOverview.get(0));
