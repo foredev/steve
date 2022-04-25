@@ -115,13 +115,12 @@ public class ChargePointRepositoryImpl implements ChargePointRepository {
                         .lastHeartbeatTimestampDT(r.value5())
                         .lastHeartbeatTimestamp(DateTimeUtils.humanize(r.value5()))
                         .fwVersion(r.value6())
-                        .fwUpdateStatus(DateTimeUtils.humanize(r.value7()))
                         .build()
                 );
     }
 
     @SuppressWarnings("unchecked")
-    private Result<Record7<Integer, String, String, String, DateTime,String, DateTime>> getOverviewInternal(ChargePointQueryForm form) {
+    private Result<Record6<Integer, String, String, String, DateTime,String>> getOverviewInternal(ChargePointQueryForm form) {
         SelectQuery selectQuery = ctx.selectQuery();
         selectQuery.addFrom(CHARGE_BOX);
         selectQuery.addSelect(
@@ -130,8 +129,7 @@ public class ChargePointRepositoryImpl implements ChargePointRepository {
                 CHARGE_BOX.DESCRIPTION,
                 CHARGE_BOX.OCPP_PROTOCOL,
                 CHARGE_BOX.LAST_HEARTBEAT_TIMESTAMP,
-                CHARGE_BOX.FW_VERSION,
-                CHARGE_BOX.FW_UPDATE_STATUS
+                CHARGE_BOX.FW_VERSION
         );
 
         if (form.isSetOcppVersion()) {
