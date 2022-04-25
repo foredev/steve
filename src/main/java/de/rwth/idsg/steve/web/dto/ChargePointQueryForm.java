@@ -35,6 +35,8 @@ public class ChargePointQueryForm {
     private String description;
     private OcppVersion ocppVersion;
     private QueryPeriodType heartbeatPeriod;
+    private String fwVersion;
+    private String fwUpdateTimestamp;
 
     /**
      * Init with sensible default values
@@ -54,6 +56,8 @@ public class ChargePointQueryForm {
     public boolean isSetChargeBoxId() {
         return chargeBoxId != null;
     }
+    public boolean isSetFwVersion() { return fwVersion != null; }
+    public boolean isSetFwUpdateTimestamp() { return fwUpdateTimestamp != null; }
 
     @RequiredArgsConstructor
     public enum QueryPeriodType {
