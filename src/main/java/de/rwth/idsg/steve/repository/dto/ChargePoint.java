@@ -37,6 +37,7 @@ public final class ChargePoint {
     public static final class Overview {
         private final int chargeBoxPk;
         private final String chargeBoxId, description, ocppProtocol, lastHeartbeatTimestamp;
+        private final String fw_version, fw_update_status;
         private final DateTime lastHeartbeatTimestampDT;
     }
 

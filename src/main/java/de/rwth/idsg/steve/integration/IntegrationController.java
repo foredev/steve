@@ -7,11 +7,13 @@ import de.rwth.idsg.steve.ocpp.OcppTransport;
 import de.rwth.idsg.steve.repository.ChargePointRepository;
 import de.rwth.idsg.steve.repository.ChargingProfileRepository;
 import de.rwth.idsg.steve.repository.TransactionRepository;
+import de.rwth.idsg.steve.repository.dto.ChargePoint;
 import de.rwth.idsg.steve.repository.dto.ChargePointSelect;
 import de.rwth.idsg.steve.repository.dto.Transaction;
 import de.rwth.idsg.steve.repository.dto.TransactionDetails;
 import de.rwth.idsg.steve.service.ChargePointHelperService;
 import de.rwth.idsg.steve.service.ChargePointService16_Client;
+import de.rwth.idsg.steve.web.dto.ChargePointQueryForm;
 import de.rwth.idsg.steve.web.dto.ChargingProfileForm;
 import de.rwth.idsg.steve.web.dto.ocpp.RemoteStartTransactionParams;
 import de.rwth.idsg.steve.web.dto.ocpp.RemoteStopTransactionParams;
@@ -45,6 +47,14 @@ public class IntegrationController {
     private final ChargePointService16_Client client16;
     private final MqttService mqttService;
 
+    private enum Status {
+        OK,
+        NOK,
+        STARTED,
+        NOTSTARTED,
+        ALREADYSTARTED,
+        ERROR
+    }
     public IntegrationController(ChargePointRepository chargePointRepository, ChargingProfileRepository chargingProfileRepository, ChargePointHelperService chargePointHelperService, TransactionRepository transactionRepository, @Qualifier("ChargePointService16_Client") ChargePointService16_Client client16, MqttService mqttService) {
         this.chargePointRepository = chargePointRepository;
         this.chargingProfileRepository = chargingProfileRepository;
@@ -171,7 +181,7 @@ public class IntegrationController {
     }
 
     @RequestMapping(value = "/{chargeBoxId}/{connectorId}/transaction", method = RequestMethod.GET)
-    public ResponseEntity<Boolean> startTransaction(@PathVariable String chargeBoxId, @PathVariable int connectorId) {
+    public ResponseEntity<Status> startTransaction(@PathVariable String chargeBoxId, @PathVariable int connectorId) {
         List<ChargePointSelect> chargePointSelectList = new ArrayList<>();
         ChargePointSelect chargePointSelect = new ChargePointSelect(OcppTransport.JSON, chargeBoxId);
         chargePointSelectList.add(chargePointSelect);
@@ -184,6 +194,20 @@ public class IntegrationController {
         int taskId = client16.remoteStartTransaction(params);
 
         log.debug("[chargeBoxId={}, connectionId={}, idTag={}, taskId={}] Remote start transaction", chargeBoxId, 1, 999999, taskId);
-        return ResponseEntity.ok(true);
+        return ResponseEntity.ok(Status.OK);
+    }
+
+    @RequestMapping(value = "/{chargeBoxId}/getChargeBoxOverview", method = RequestMethod.GET)
+    public ResponseEntity<ChargePoint.Overview> getChargeBoxOverview(@PathVariable String chargeBoxId) {
+        ChargePointQueryForm form = new ChargePointQueryForm();
+        form.setChargeBoxId(chargeBoxId);
+        List<ChargePoint.Overview> chargeBoxOverview = chargePointRepository.getOverview(form);
+
+        if(chargeBoxOverview.isEmpty()) {
+            log.debug("[chargeBoxId={}] Charge box id not found in overview information", chargeBoxId);
+            return ResponseEntity.badRequest().body(null);
+        }
+
+        return ResponseEntity.ok().body(chargeBoxOverview.get(0));
     }
 }

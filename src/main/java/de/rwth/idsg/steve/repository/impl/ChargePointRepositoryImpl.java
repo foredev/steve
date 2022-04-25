@@ -34,15 +34,7 @@ import jooq.steve.db.tables.records.ChargeBoxRecord;
 import lombok.extern.slf4j.Slf4j;
 import ocpp.cs._2015._10.RegistrationStatus;
 import org.joda.time.DateTime;
-import org.jooq.Condition;
-import org.jooq.DSLContext;
-import org.jooq.Field;
-import org.jooq.Record1;
-import org.jooq.Record5;
-import org.jooq.Result;
-import org.jooq.SelectConditionStep;
-import org.jooq.SelectQuery;
-import org.jooq.Table;
+import org.jooq.*;
 import org.jooq.exception.DataAccessException;
 import org.jooq.impl.DSL;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -116,18 +108,20 @@ public class ChargePointRepositoryImpl implements ChargePointRepository {
     public List<ChargePoint.Overview> getOverview(ChargePointQueryForm form) {
         return getOverviewInternal(form)
                 .map(r -> ChargePoint.Overview.builder()
-                                              .chargeBoxPk(r.value1())
-                                              .chargeBoxId(r.value2())
-                                              .description(r.value3())
-                                              .ocppProtocol(r.value4())
-                                              .lastHeartbeatTimestampDT(r.value5())
-                                              .lastHeartbeatTimestamp(DateTimeUtils.humanize(r.value5()))
-                                              .build()
+                        .chargeBoxPk(r.value1())
+                        .chargeBoxId(r.value2())
+                        .description(r.value3())
+                        .ocppProtocol(r.value4())
+                        .lastHeartbeatTimestampDT(r.value5())
+                        .lastHeartbeatTimestamp(DateTimeUtils.humanize(r.value5()))
+                        .fw_version(r.value6())
+                        .fw_update_status(DateTimeUtils.humanize(r.value7()))
+                        .build()
                 );
     }
 
     @SuppressWarnings("unchecked")
-    private Result<Record5<Integer, String, String, String, DateTime>> getOverviewInternal(ChargePointQueryForm form) {
+    private Result<Record7<Integer, String, String, String, DateTime,String, DateTime>> getOverviewInternal(ChargePointQueryForm form) {
         SelectQuery selectQuery = ctx.selectQuery();
         selectQuery.addFrom(CHARGE_BOX);
         selectQuery.addSelect(
@@ -135,7 +129,9 @@ public class ChargePointRepositoryImpl implements ChargePointRepository {
                 CHARGE_BOX.CHARGE_BOX_ID,
                 CHARGE_BOX.DESCRIPTION,
                 CHARGE_BOX.OCPP_PROTOCOL,
-                CHARGE_BOX.LAST_HEARTBEAT_TIMESTAMP
+                CHARGE_BOX.LAST_HEARTBEAT_TIMESTAMP,
+                CHARGE_BOX.FW_VERSION,
+                CHARGE_BOX.FW_UPDATE_STATUS
         );
 
         if (form.isSetOcppVersion()) {
@@ -177,6 +173,11 @@ public class ChargePointRepositoryImpl implements ChargePointRepository {
             default:
                 throw new SteveException("Unknown enum type");
         }
+
+        if(form.isSetFwVersion()) {
+            selectQuery.addConditions(includes(CHARGE_BOX.FW_VERSION, form.getFwVersion()));
+        }
+
 
         // Default order
         selectQuery.addOrderBy(CHARGE_BOX.CHARGE_BOX_PK.asc());
