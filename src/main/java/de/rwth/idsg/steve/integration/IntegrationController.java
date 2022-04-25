@@ -197,7 +197,7 @@ public class IntegrationController {
         return ResponseEntity.ok(Status.OK);
     }
 
-    @RequestMapping(value = "/{chargeBoxId}/getChargeBoxOverview", method = RequestMethod.GET)
+    @RequestMapping(value = "/{chargeBoxId}", method = RequestMethod.GET)
     public ResponseEntity<ChargePoint.Overview> getChargeBoxOverview(@PathVariable String chargeBoxId) {
         ChargePointQueryForm form = new ChargePointQueryForm();
         form.setChargeBoxId(chargeBoxId);
