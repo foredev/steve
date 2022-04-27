@@ -18,8 +18,10 @@
  */
 package de.rwth.idsg.steve.repository;
 
+import de.rwth.idsg.steve.repository.dto.ChargeBoxDetails;
 import de.rwth.idsg.steve.repository.dto.ChargingProfile;
 import de.rwth.idsg.steve.repository.dto.ChargingProfileAssignment;
+import de.rwth.idsg.steve.web.dto.ChargePointQueryForm;
 import de.rwth.idsg.steve.web.dto.ChargingProfileAssignmentQueryForm;
 import de.rwth.idsg.steve.web.dto.ChargingProfileForm;
 import de.rwth.idsg.steve.web.dto.ChargingProfileQueryForm;

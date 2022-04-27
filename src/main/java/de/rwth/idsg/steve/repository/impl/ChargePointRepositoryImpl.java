@@ -22,6 +22,7 @@ import de.rwth.idsg.steve.SteveException;
 import de.rwth.idsg.steve.ocpp.OcppProtocol;
 import de.rwth.idsg.steve.repository.AddressRepository;
 import de.rwth.idsg.steve.repository.ChargePointRepository;
+import de.rwth.idsg.steve.repository.dto.ChargeBoxDetails;
 import de.rwth.idsg.steve.repository.dto.ChargePoint;
 import de.rwth.idsg.steve.repository.dto.ChargePointSelect;
 import de.rwth.idsg.steve.repository.dto.ConnectorStatus;
@@ -104,6 +105,61 @@ public class ChargePointRepositoryImpl implements ChargePointRepository {
                   .fetchMap(CHARGE_BOX.CHARGE_BOX_ID, CHARGE_BOX.CHARGE_BOX_PK);
     }
 
+    public List<ChargeBoxDetails.Overview> getChargeBoxDetails(ChargePointQueryForm form) {
+        return getBoxDetailsInternal(form)
+                .map(r -> ChargeBoxDetails.Overview.builder()
+                        .chargeBoxPk(r.value1())
+                        .chargeBoxId(r.value2())
+                        .description(r.value3())
+                        .fwVersion(r.value4())
+                        .fwUpdateStatus(r.value5())
+                        .fwUpdateTimestamp(r.value6() != null ? r.value6().toString() : null)
+                        .registrationStatus(r.value7())
+                        .chargePointVendor(r.value8())
+                        .chargePointModel(r.value9())
+                        .chargeBoxSerialNumber(r.value10())
+                        .meterType(r.value11())
+                        .meterSerialNumber(r.value12())
+                        .note(r.value13())
+                        .ocppProtocol(r.value14())
+                        .lastHeartbeatTimestamp(r.value15() != null ? r.value15().toString() : null)
+                        .endpointAddress(r.value16())
+                        .chargePointSerialNumber(r.value17())
+                        .build());
+    }
+
+    private Result<Record17<Integer, String, String, String, String, DateTime, String,
+            String, String, String, String, String, String, String, DateTime, String, String>> getBoxDetailsInternal(ChargePointQueryForm form) {
+        SelectQuery selectQuery = ctx.selectQuery();
+        selectQuery.addFrom(CHARGE_BOX);
+
+        selectQuery.addSelect(CHARGE_BOX.CHARGE_BOX_PK,
+                CHARGE_BOX.CHARGE_BOX_ID,
+                CHARGE_BOX.DESCRIPTION,
+                CHARGE_BOX.FW_VERSION,
+                CHARGE_BOX.FW_UPDATE_STATUS,
+                CHARGE_BOX.FW_UPDATE_TIMESTAMP,
+                CHARGE_BOX.REGISTRATION_STATUS,
+                CHARGE_BOX.CHARGE_POINT_VENDOR,
+                CHARGE_BOX.CHARGE_POINT_MODEL,
+                CHARGE_BOX.CHARGE_BOX_SERIAL_NUMBER,
+                CHARGE_BOX.METER_TYPE,
+                CHARGE_BOX.METER_SERIAL_NUMBER,
+                CHARGE_BOX.NOTE,
+                CHARGE_BOX.OCPP_PROTOCOL,
+                CHARGE_BOX.LAST_HEARTBEAT_TIMESTAMP,
+                CHARGE_BOX.ENDPOINT_ADDRESS,
+                CHARGE_BOX.CHARGE_POINT_SERIAL_NUMBER
+        );
+
+        if (form.isSetChargeBoxId()) {
+            selectQuery.addConditions(includes(CHARGE_BOX.CHARGE_BOX_ID, form.getChargeBoxId()));
+        }
+        // Default order
+        selectQuery.addOrderBy(CHARGE_BOX.CHARGE_BOX_PK.asc());
+
+        return selectQuery.fetch();
+    }
     @Override
     public List<ChargePoint.Overview> getOverview(ChargePointQueryForm form) {
         return getOverviewInternal(form)

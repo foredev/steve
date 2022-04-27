@@ -19,6 +19,7 @@
 package de.rwth.idsg.steve.repository;
 
 import de.rwth.idsg.steve.ocpp.OcppProtocol;
+import de.rwth.idsg.steve.repository.dto.ChargeBoxDetails;
 import de.rwth.idsg.steve.repository.dto.ChargePoint;
 import de.rwth.idsg.steve.repository.dto.ChargePointSelect;
 import de.rwth.idsg.steve.repository.dto.ConnectorStatus;
@@ -41,6 +42,7 @@ public interface ChargePointRepository {
     List<String> getChargeBoxIds();
     Map<String, Integer> getChargeBoxIdPkPair(List<String> chargeBoxIdList);
 
+    List<ChargeBoxDetails.Overview> getChargeBoxDetails(ChargePointQueryForm form);
     List<ChargePoint.Overview> getOverview(ChargePointQueryForm form);
     ChargePoint.Details getDetails(int chargeBoxPk);
 

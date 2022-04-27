@@ -7,10 +7,7 @@ import de.rwth.idsg.steve.ocpp.OcppTransport;
 import de.rwth.idsg.steve.repository.ChargePointRepository;
 import de.rwth.idsg.steve.repository.ChargingProfileRepository;
 import de.rwth.idsg.steve.repository.TransactionRepository;
-import de.rwth.idsg.steve.repository.dto.ChargePoint;
-import de.rwth.idsg.steve.repository.dto.ChargePointSelect;
-import de.rwth.idsg.steve.repository.dto.Transaction;
-import de.rwth.idsg.steve.repository.dto.TransactionDetails;
+import de.rwth.idsg.steve.repository.dto.*;
 import de.rwth.idsg.steve.service.ChargePointHelperService;
 import de.rwth.idsg.steve.service.ChargePointService16_Client;
 import de.rwth.idsg.steve.web.dto.ChargePointQueryForm;
@@ -198,16 +195,15 @@ public class IntegrationController {
     }
 
     @RequestMapping(value = "/{chargeBoxId}", method = RequestMethod.GET)
-    public ResponseEntity<ChargePoint.Overview> getChargeBoxOverview(@PathVariable String chargeBoxId) {
+    public ResponseEntity<ChargeBoxDetails.Overview> getChargeBoxOverview(@PathVariable String chargeBoxId) {
         ChargePointQueryForm form = new ChargePointQueryForm();
         form.setChargeBoxId(chargeBoxId);
-        List<ChargePoint.Overview> chargeBoxOverview = chargePointRepository.getOverview(form);
+        List<ChargeBoxDetails.Overview> chargeBoxOverview = chargePointRepository.getChargeBoxDetails(form);
 
         if (chargeBoxOverview.isEmpty()) {
             log.debug("[chargeBoxId={}] Charge box id not found in overview information", chargeBoxId);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
-
         return ResponseEntity.ok().body(chargeBoxOverview.get(0));
     }
 }
