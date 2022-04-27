@@ -193,7 +193,7 @@ public class IntegrationController {
 
         int taskId = client16.remoteStartTransaction(params);
 
-        log.debug("[chargeBoxId={}, connectionId={}, idTag={}, taskId={}] Remote start transaction", chargeBoxId, 1, 999999, taskId);
+        log.debug("[chargeBoxId={}, connectionId={}, idTag={}, taskId={}] Remote start transaction", chargeBoxId, connectorId, tag, taskId);
         return ResponseEntity.ok(true);
     }
 
