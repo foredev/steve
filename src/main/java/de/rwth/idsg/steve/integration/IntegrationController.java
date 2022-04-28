@@ -3,9 +3,12 @@ package de.rwth.idsg.steve.integration;
 import de.rwth.idsg.steve.integration.dto.EnergyMeterData;
 import de.rwth.idsg.steve.integration.dto.ChargingLimitRequest;
 import de.rwth.idsg.steve.integration.dto.ChargingLimitResponse;
+import de.rwth.idsg.steve.ocpp.RequestResult;
+import de.rwth.idsg.steve.ocpp.CommunicationTask;
 import de.rwth.idsg.steve.ocpp.OcppTransport;
 import de.rwth.idsg.steve.repository.ChargePointRepository;
 import de.rwth.idsg.steve.repository.ChargingProfileRepository;
+import de.rwth.idsg.steve.repository.TaskStore;
 import de.rwth.idsg.steve.repository.TransactionRepository;
 import de.rwth.idsg.steve.repository.dto.*;
 import de.rwth.idsg.steve.service.ChargePointHelperService;
@@ -43,22 +46,16 @@ public class IntegrationController {
     private final TransactionRepository transactionRepository;
     private final ChargePointService16_Client client16;
     private final MqttService mqttService;
+    private final TaskStore taskStore;
 
-    private enum Status {
-        OK,
-        NOK,
-        STARTED,
-        NOT_STARTED,
-        ALREADY_STARTED,
-        ERROR
-    }
-    public IntegrationController(ChargePointRepository chargePointRepository, ChargingProfileRepository chargingProfileRepository, ChargePointHelperService chargePointHelperService, TransactionRepository transactionRepository, @Qualifier("ChargePointService16_Client") ChargePointService16_Client client16, MqttService mqttService) {
+    public IntegrationController(ChargePointRepository chargePointRepository, ChargingProfileRepository chargingProfileRepository, ChargePointHelperService chargePointHelperService, TransactionRepository transactionRepository, @Qualifier("ChargePointService16_Client") ChargePointService16_Client client16, MqttService mqttService, TaskStore taskStore) {
         this.chargePointRepository = chargePointRepository;
         this.chargingProfileRepository = chargingProfileRepository;
         this.chargePointHelperService = chargePointHelperService;
         this.transactionRepository = transactionRepository;
         this.client16 = client16;
         this.mqttService = mqttService;
+        this.taskStore = taskStore;
     }
 
     @RequestMapping(value = "/{chargePointId}", method = RequestMethod.POST)
@@ -178,20 +175,29 @@ public class IntegrationController {
     }
 
     @RequestMapping(value = "/{chargeBoxId}/{connectorId}/{tag}/transaction", method = RequestMethod.GET)
-    public ResponseEntity<Boolean> startTransaction(@PathVariable String chargeBoxId, @PathVariable int connectorId, @PathVariable String tag) {
+    public ResponseEntity<Boolean> startTransaction(@PathVariable String chargeBoxId, @PathVariable int connectorId, @PathVariable String tag) throws InterruptedException {
         List<ChargePointSelect> chargePointSelectList = new ArrayList<>();
         ChargePointSelect chargePointSelect = new ChargePointSelect(OcppTransport.JSON, chargeBoxId);
-        chargePointSelectList.add(chargePointSelect);
+        boolean connected = chargePointHelperService.isConnected(chargeBoxId);
 
+        if (!connected) {
+            log.warn("Charge box " + chargeBoxId + " is not connected");
+            return ResponseEntity.badRequest().body(false);
+        }
+
+        chargePointSelectList.add(chargePointSelect);
         RemoteStartTransactionParams params = new RemoteStartTransactionParams();
         params.setChargePointSelectList(chargePointSelectList);
         params.setConnectorId(connectorId);
         params.setIdTag(tag);
 
         int taskId = client16.remoteStartTransaction(params);
+        Thread.sleep(5000);
+        CommunicationTask transactionTask = taskStore.get(taskId);
 
-        log.debug("[chargeBoxId={}, connectionId={}, idTag={}, taskId={}] Remote start transaction", chargeBoxId, connectorId, tag, taskId);
-        return ResponseEntity.ok(true);
+        log.warn("[chargeBoxId={}, connectionId={}, idTag={}, taskId={}] Remote start transaction", chargeBoxId, connectorId, tag, taskId);
+        return ResponseEntity.ok(((RequestResult)transactionTask.getResultMap().get(chargeBoxId)).getErrorMessage() != null ? false : true);
+
     }
 
     @RequestMapping(value = "/{chargeBoxId}", method = RequestMethod.GET)
