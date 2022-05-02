@@ -1,5 +1,6 @@
 package de.rwth.idsg.steve.integration;
 
+import de.rwth.idsg.steve.integration.dto.ChargingProfileResponse;
 import de.rwth.idsg.steve.integration.dto.EnergyMeterData;
 import de.rwth.idsg.steve.integration.dto.ChargingLimitRequest;
 import de.rwth.idsg.steve.integration.dto.ChargingLimitResponse;
@@ -18,10 +19,12 @@ import de.rwth.idsg.steve.web.dto.ChargingProfileForm;
 import de.rwth.idsg.steve.web.dto.ocpp.RemoteStartTransactionParams;
 import de.rwth.idsg.steve.web.dto.ocpp.RemoteStopTransactionParams;
 import de.rwth.idsg.steve.web.dto.ocpp.SetChargingProfileParams;
+import jdk.jfr.ContentType;
 import lombok.extern.slf4j.Slf4j;
 import ocpp.cp._2015._10.ChargingProfileKindType;
 import ocpp.cp._2015._10.ChargingProfilePurposeType;
 import ocpp.cp._2015._10.ChargingRateUnitType;
+import org.eclipse.jetty.server.Request;
 import org.joda.time.LocalDateTime;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
@@ -99,6 +102,28 @@ public class IntegrationController {
 
         int chargingProfileId = addChargingProfile(request);
 
+        int taskId = sendChargingProfile(chargeBoxId, connectorId, chargingProfileId);
+
+        return ResponseEntity.ok(new ChargingLimitResponse(true));
+    }
+
+    @RequestMapping(value= "/{chargeBoxId}/{connectorId}/chargingProfile", method = RequestMethod.POST, consumes = "application/json")
+    public ResponseEntity<ChargingProfileResponse> createChargingProfile(@PathVariable String chargeBoxId, @PathVariable int connectorId, @RequestBody ChargingProfileForm request) {
+        boolean connected = chargePointHelperService.isConnected(chargeBoxId);
+        if(!connected) {
+            log.warn("Charge box " + chargeBoxId + " is not connected in chargingProfile endpoint");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ChargingProfileResponse(false, "Chargebox: " + chargeBoxId + " is not connected"));
+        }
+
+        int chargingProfileId = chargingProfileRepository.add(request);
+        int taskId = sendChargingProfile(chargeBoxId, connectorId, chargingProfileId);
+
+        log.info("[chargeBoxId={}, connectorId={}, taskId={}] create charging profile", chargeBoxId, connectorId, taskId);
+
+        return ResponseEntity.ok(new ChargingProfileResponse(true));
+    }
+
+    private int sendChargingProfile(String chargeBoxId, int connectorId, int chargingProfileId) {
         ChargePointSelect chargePointSelect = new ChargePointSelect(OcppTransport.JSON, chargeBoxId);
 
         List<ChargePointSelect> chargePointSelectList = new ArrayList<>();
@@ -109,9 +134,8 @@ public class IntegrationController {
         params.setConnectorId(connectorId);
         params.setChargingProfilePk(chargingProfileId);
 
-        client16.setChargingProfile(params);
+        return client16.setChargingProfile(params);
 
-        return ResponseEntity.ok(new ChargingLimitResponse(true));
     }
 
     private int addChargingProfile(ChargingLimitRequest request) {
