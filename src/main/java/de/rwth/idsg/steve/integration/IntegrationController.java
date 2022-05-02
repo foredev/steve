@@ -120,7 +120,7 @@ public class IntegrationController {
 
         log.info("[chargeBoxId={}, connectorId={}, taskId={}] create charging profile", chargeBoxId, connectorId, taskId);
 
-        return ResponseEntity.ok(new ChargingProfileResponse(true));
+        return ResponseEntity.ok(new ChargingProfileResponse(true, chargingProfileId));
     }
 
     private int sendChargingProfile(String chargeBoxId, int connectorId, int chargingProfileId) {
