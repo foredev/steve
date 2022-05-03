@@ -116,10 +116,7 @@ public class IntegrationController {
         }
 
         int chargingProfileId = chargingProfileRepository.add(request);
-        int taskId = sendChargingProfile(chargeBoxId, connectorId, chargingProfileId);
-
-        log.info("[chargeBoxId={}, connectorId={}, taskId={}] create charging profile", chargeBoxId, connectorId, taskId);
-
+        log.info("[chargeBoxId={}, connectorId={}] create charging profile", chargeBoxId, connectorId);
         return ResponseEntity.ok(new ChargingProfileResponse(true, chargingProfileId));
     }
 
