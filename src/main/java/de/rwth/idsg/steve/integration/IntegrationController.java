@@ -1,5 +1,6 @@
 package de.rwth.idsg.steve.integration;
 
+import de.rwth.idsg.steve.integration.dto.ChargingProfileResponse;
 import de.rwth.idsg.steve.integration.dto.EnergyMeterData;
 import de.rwth.idsg.steve.integration.dto.ChargingLimitRequest;
 import de.rwth.idsg.steve.integration.dto.ChargingLimitResponse;
@@ -13,21 +14,27 @@ import de.rwth.idsg.steve.repository.TransactionRepository;
 import de.rwth.idsg.steve.repository.dto.*;
 import de.rwth.idsg.steve.service.ChargePointHelperService;
 import de.rwth.idsg.steve.service.ChargePointService16_Client;
+import de.rwth.idsg.steve.utils.mapper.ChargingProfileDetailsMapper;
 import de.rwth.idsg.steve.web.dto.ChargePointQueryForm;
 import de.rwth.idsg.steve.web.dto.ChargingProfileForm;
 import de.rwth.idsg.steve.web.dto.ocpp.RemoteStartTransactionParams;
 import de.rwth.idsg.steve.web.dto.ocpp.RemoteStopTransactionParams;
 import de.rwth.idsg.steve.web.dto.ocpp.SetChargingProfileParams;
+import jdk.jfr.ContentType;
 import lombok.extern.slf4j.Slf4j;
 import ocpp.cp._2015._10.ChargingProfileKindType;
 import ocpp.cp._2015._10.ChargingProfilePurposeType;
 import ocpp.cp._2015._10.ChargingRateUnitType;
+import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.Response;
 import org.joda.time.LocalDateTime;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -37,7 +44,7 @@ import java.util.*;
 @Slf4j
 @Controller
 @ResponseBody
-@RequestMapping(value = "/api/chargepoints", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping(value = "/api", produces = MediaType.APPLICATION_JSON_VALUE)
 public class IntegrationController {
 
     private final ChargePointRepository chargePointRepository;
@@ -58,7 +65,7 @@ public class IntegrationController {
         this.taskStore = taskStore;
     }
 
-    @RequestMapping(value = "/{chargePointId}", method = RequestMethod.POST)
+    @RequestMapping(value = "/chargepoints/{chargePointId}", method = RequestMethod.POST)
     public ResponseEntity<String> addChargePoint(@PathVariable String chargePointId) {
         Optional<String> registrationStatus = chargePointRepository.getRegistrationStatus(chargePointId);
         if (registrationStatus.isPresent()) {
@@ -70,7 +77,7 @@ public class IntegrationController {
         return ResponseEntity.ok(chargePointId);
     }
 
-    @RequestMapping(value = "/mqtt-test", method = RequestMethod.POST)
+    @RequestMapping(value = "/chargepoints/mqtt-test", method = RequestMethod.POST)
     public ResponseEntity<Boolean> mqttTest() {
         EnergyMeterData energyMeterData = new EnergyMeterData();
         energyMeterData.setEnergy(10000);
@@ -83,7 +90,7 @@ public class IntegrationController {
         return ResponseEntity.ok(true);
     }
 
-    @RequestMapping(value = "/{chargeBoxId}/{connectorId}/charginglimit", method = RequestMethod.POST)
+    @RequestMapping(value = "/chargepoints/{chargeBoxId}/{connectorId}/charginglimit", method = RequestMethod.POST)
     public ResponseEntity<ChargingLimitResponse> setChargingLimit(@PathVariable String chargeBoxId, @PathVariable int connectorId, @RequestBody ChargingLimitRequest request) {
         boolean connected = chargePointHelperService.isConnected(chargeBoxId);
         if (!connected) {
@@ -99,6 +106,57 @@ public class IntegrationController {
 
         int chargingProfileId = addChargingProfile(request);
 
+        int taskId = sendChargingProfile(chargeBoxId, connectorId, chargingProfileId);
+
+        return ResponseEntity.ok(new ChargingLimitResponse(true));
+    }
+
+    @RequestMapping(value= "/chargingprofile", method = RequestMethod.POST, consumes = "application/json")
+    public ResponseEntity<ChargingProfileResponse> createChargingProfile(@RequestBody ChargingProfileForm request) {
+        int chargingProfileId = chargingProfileRepository.add(request);
+        return ResponseEntity.ok(new ChargingProfileResponse(true, chargingProfileId));
+    }
+
+    @RequestMapping(value = "/chargingprofile/{chargingProfilePk}", method = RequestMethod.GET)
+    public ResponseEntity<ChargingProfileForm> getChargingProfile(@PathVariable int chargingProfilePk) {
+        ChargingProfile.Details details = chargingProfileRepository.getDetails(chargingProfilePk);
+        if(details == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+
+        ChargingProfileForm form = ChargingProfileDetailsMapper.mapToForm(details);
+        return ResponseEntity.ok(form);
+    }
+
+    @RequestMapping(value="/chargepoints/{chargeBoxId}/{connectorId}/{chargingProfileId}", method=RequestMethod.DELETE)
+    public ResponseEntity<ChargingProfileResponse> clearChargingProfile(@PathVariable String chargeBoxId, @PathVariable int connectorId, @PathVariable int chargingProfileId) {
+        boolean connected = chargePointHelperService.isConnected(chargeBoxId);
+        if(!connected) {
+            log.warn("Charge box " + chargeBoxId + " is not connected");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ChargingProfileResponse(false, "Charge box " +chargeBoxId + " is not connected"));
+        }
+        ChargingProfile.Details details = chargingProfileRepository.getDetails(chargingProfileId);
+
+        chargingProfileRepository.clearProfile(chargeBoxId, connectorId,
+                ChargingProfilePurposeType.fromValue(details.getProfile().getChargingProfilePurpose()),
+                details.getProfile().getStackLevel());
+        return ResponseEntity.ok(new ChargingProfileResponse(true, chargingProfileId));
+    }
+
+    @RequestMapping(value = "/chargepoints/{chargeBoxId}/{connectorId}/{chargingProfileId}", method = RequestMethod.GET)
+    public ResponseEntity<ChargingProfileResponse> setChargingProfile(@PathVariable String chargeBoxId, @PathVariable int connectorId, @PathVariable int chargingProfileId) {
+        boolean connected = chargePointHelperService.isConnected(chargeBoxId);
+        if (!connected) {
+            log.warn("Charge box " + chargeBoxId + " is not connected");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ChargingProfileResponse(false, "Charge box " + chargeBoxId + " is not connected"));
+        }
+
+        int taskId = sendChargingProfile(chargeBoxId, connectorId, chargingProfileId);
+
+        return ResponseEntity.ok(new ChargingProfileResponse(true, chargingProfileId));
+    }
+
+    private int sendChargingProfile(String chargeBoxId, int connectorId, int chargingProfileId) {
         ChargePointSelect chargePointSelect = new ChargePointSelect(OcppTransport.JSON, chargeBoxId);
 
         List<ChargePointSelect> chargePointSelectList = new ArrayList<>();
@@ -109,9 +167,8 @@ public class IntegrationController {
         params.setConnectorId(connectorId);
         params.setChargingProfilePk(chargingProfileId);
 
-        client16.setChargingProfile(params);
+        return client16.setChargingProfile(params);
 
-        return ResponseEntity.ok(new ChargingLimitResponse(true));
     }
 
     private int addChargingProfile(ChargingLimitRequest request) {
@@ -134,7 +191,7 @@ public class IntegrationController {
         return chargingProfileRepository.add(form);
     }
 
-    @RequestMapping(value = "/{chargeBoxId}/{connectorId}/transaction", method = RequestMethod.DELETE)
+    @RequestMapping(value = "/chargepoints/{chargeBoxId}/{connectorId}/transaction", method = RequestMethod.DELETE)
     public ResponseEntity<Boolean> stopActiveTransaction(@PathVariable String chargeBoxId, @PathVariable int connectorId, HttpServletRequest request) {
         List<Integer> activeTransactionIds = transactionRepository.getActiveTransactionIds(chargeBoxId);
 
@@ -174,7 +231,7 @@ public class IntegrationController {
         return ResponseEntity.ok(true);
     }
 
-    @RequestMapping(value = "/{chargeBoxId}/{connectorId}/{tag}/transaction", method = RequestMethod.GET)
+    @RequestMapping(value = "/chargepoints/{chargeBoxId}/{connectorId}/{tag}/transaction", method = RequestMethod.GET)
     public ResponseEntity<Boolean> startTransaction(@PathVariable String chargeBoxId, @PathVariable int connectorId, @PathVariable String tag) throws InterruptedException {
         List<ChargePointSelect> chargePointSelectList = new ArrayList<>();
         ChargePointSelect chargePointSelect = new ChargePointSelect(OcppTransport.JSON, chargeBoxId);
@@ -200,7 +257,7 @@ public class IntegrationController {
 
     }
 
-    @RequestMapping(value = "/{chargeBoxId}", method = RequestMethod.GET)
+    @RequestMapping(value = "/chargepoints/{chargeBoxId}", method = RequestMethod.GET)
     public ResponseEntity<ChargeBoxDetails.Overview> getChargeBoxOverview(@PathVariable String chargeBoxId) {
         ChargePointQueryForm form = new ChargePointQueryForm();
         form.setChargeBoxId(chargeBoxId);
