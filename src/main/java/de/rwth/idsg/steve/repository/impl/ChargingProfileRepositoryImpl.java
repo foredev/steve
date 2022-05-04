@@ -260,7 +260,10 @@ public class ChargingProfileRepositoryImpl implements ChargingProfileRepository 
                    .where(CHARGING_SCHEDULE_PERIOD.CHARGING_PROFILE_PK.eq(chargingProfilePk))
                    .fetch();
 
-        return new ChargingProfile.Details(profile, periods);
+        if(profile != null && periods != null) {
+            return new ChargingProfile.Details(profile, periods);
+        }
+        return null;
     }
 
     @Override
