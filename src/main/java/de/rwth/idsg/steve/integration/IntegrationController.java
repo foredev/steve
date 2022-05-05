@@ -197,7 +197,7 @@ public class IntegrationController {
 
         if (activeTransactionIds.isEmpty()) {
             log.info("No active transactions for charge box {} and connector {}", chargeBoxId, connectorId);
-            return ResponseEntity.badRequest().body("No active transaction");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(true);
         }
 
         List<Transaction> transactions = new ArrayList<>();
@@ -212,7 +212,7 @@ public class IntegrationController {
                 .findFirst();
 
         if (optionalTransaction.isEmpty()) {
-            return ResponseEntity.badRequest().body("No optional transaction");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(true);
         }
         Transaction transaction = optionalTransaction.get();
         log.info("Transaction selected: {}", transaction.getId());
