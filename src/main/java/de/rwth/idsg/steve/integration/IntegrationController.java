@@ -274,11 +274,11 @@ public class IntegrationController {
 
 
    @RequestMapping(value="/chargepoints/{chargeBoxId}/configuration", method = RequestMethod.GET)
-    public ResponseEntity<String> getChargeBoxConfiguration(@PathVariable String chargeBoxId) throws InterruptedException {
+    public ResponseEntity<List<GetConfigurationTask.KeyValue>> getChargeBoxConfiguration(@PathVariable String chargeBoxId) throws InterruptedException {
         boolean connected = chargePointHelperService.isConnected(chargeBoxId);
         if(!connected) {
             log.warn("Charge box " + chargeBoxId + " is not connected");
-            return ResponseEntity.badRequest().body("not connected");
+            return ResponseEntity.badRequest().body(null);
         }
         GetConfigurationParams params = new GetConfigurationParams();
         List<ChargePointSelect> chargePointList = new ArrayList<>();
@@ -298,7 +298,7 @@ public class IntegrationController {
 
        ((GetConfigurationTask.ResponseWrapper)((RequestResult)task.getResultMap().get(chargeBoxId)).getDetails()).getConfigurationKeys().forEach(entry -> log.warn("Configuration task found: " +
                entry.getKey() + ":" +entry.getValue() + " read only: "+entry.isReadonly()));
-       return ResponseEntity.ok(((GetConfigurationTask.ResponseWrapper)((RequestResult)task.getResultMap().get(chargeBoxId)).getDetails()).getConfigurationKeys().toString());
+       return ResponseEntity.ok(((GetConfigurationTask.ResponseWrapper)((RequestResult)task.getResultMap().get(chargeBoxId)).getDetails()).getConfigurationKeys());
 
     }
 }
