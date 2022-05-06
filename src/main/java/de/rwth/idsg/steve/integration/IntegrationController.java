@@ -132,7 +132,7 @@ public class IntegrationController {
     }
 
     @RequestMapping(value="/chargingprofile/{chargingProfilePk}", method = RequestMethod.POST, consumes ="application/json")
-    public ResponseEntity<List<ChargingProfileAssignment>> updateChargingProfile(@PathVariable int chargingProfilePk, @RequestBody ChargingProfileForm request) {
+    public ResponseEntity<ChargingProfileForm> updateChargingProfile(@PathVariable int chargingProfilePk, @RequestBody ChargingProfileForm request) {
         List<String> chargingBoxes = chargingProfileRepository.isChargingProfileUsed(chargingProfilePk);
         List<ChargingProfileAssignment> profileUsage = new ArrayList<>();
         for(String chargingBoxId : chargingBoxes) {
@@ -147,7 +147,9 @@ public class IntegrationController {
         for(ChargingProfileAssignment useProfile: profileUsage) {
             chargingProfileRepository.setProfile(useProfile.getChargingProfilePk(), useProfile.getChargeBoxId(), useProfile.getConnectorId());
         }
-        return ResponseEntity.ok(profileUsage);
+        ChargingProfile.Details details = chargingProfileRepository.getDetails(chargingProfilePk);
+        ChargingProfileForm form = ChargingProfileDetailsMapper.mapToForm(details);
+        return ResponseEntity.ok(form);
     }
 
     @RequestMapping(value="/chargepoints/{chargeBoxId}/{connectorId}/{chargingProfileId}", method=RequestMethod.DELETE)
