@@ -282,22 +282,16 @@ public class IntegrationController {
         }
         GetConfigurationParams params = new GetConfigurationParams();
         List<ChargePointSelect> chargePointList = new ArrayList<>();
-       /* ChargePoint chargePoint = new ChargePoint();
-        ChargePoint.Overview.builder().chargeBoxId(chargeBoxId);
-        chargePointList.add(chargePoint);
-        */
+
        chargePointList.add(new ChargePointSelect(OcppTransport.JSON, chargeBoxId));
        params.setChargePointSelectList(chargePointList);
        int taskId = client16.getConfiguration(params);
-       log.warn("Task created for configuration " + taskId);
 
        Thread.sleep(5000);
 
        CommunicationTask task = taskStore.get(taskId);
 
 
-       ((GetConfigurationTask.ResponseWrapper)((RequestResult)task.getResultMap().get(chargeBoxId)).getDetails()).getConfigurationKeys().forEach(entry -> log.warn("Configuration task found: " +
-               entry.getKey() + ":" +entry.getValue() + " read only: "+entry.isReadonly()));
        return ResponseEntity.ok(((GetConfigurationTask.ResponseWrapper)((RequestResult)task.getResultMap().get(chargeBoxId)).getDetails()).getConfigurationKeys());
 
     }
