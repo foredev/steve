@@ -115,9 +115,10 @@ public class IntegrationController {
     }
 
     @RequestMapping(value= "/chargingprofile", method = RequestMethod.POST, consumes = "application/json")
-    public ResponseEntity<ChargingProfileResponse> createChargingProfile(@RequestBody ChargingProfileForm request) {
+    public ResponseEntity<ChargingProfileForm> createChargingProfile(@RequestBody ChargingProfileForm request) {
         int chargingProfileId = chargingProfileRepository.add(request);
-        return ResponseEntity.ok(new ChargingProfileResponse(true, chargingProfileId));
+
+        return ResponseEntity.ok(ChargingProfileDetailsMapper.mapToForm(chargingProfileRepository.getDetails(chargingProfileId)));
     }
 
     @RequestMapping(value = "/chargingprofile/{chargingProfilePk}", method = RequestMethod.GET)
