@@ -67,4 +67,6 @@ public interface ChargingProfileRepository {
     void update(ChargingProfileForm form);
 
     void delete(int chargingProfilePk);
+
+    List<String> isChargingProfileUsed(int chargingProfilePk);
 }

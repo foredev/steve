@@ -349,6 +349,16 @@ public class ChargingProfileRepositoryImpl implements ChargingProfileRepository 
            .execute();
     }
 
+    public List<String> isChargingProfileUsed(int chargingProfilePk) {
+        List<String> r = ctx.select(CONNECTOR.CHARGE_BOX_ID)
+                .from(CONNECTOR_CHARGING_PROFILE)
+                .join(CONNECTOR)
+                .on(CONNECTOR.CONNECTOR_PK.eq(CONNECTOR_CHARGING_PROFILE.CONNECTOR_PK))
+                .where(CONNECTOR_CHARGING_PROFILE.CHARGING_PROFILE_PK.eq(chargingProfilePk))
+                .fetch(CONNECTOR.CHARGE_BOX_ID);
+        return r;
+    }
+
     private void checkProfileUsage(int chargingProfilePk) {
         List<String> r = ctx.select(CONNECTOR.CHARGE_BOX_ID)
                             .from(CONNECTOR_CHARGING_PROFILE)
