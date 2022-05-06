@@ -7,6 +7,7 @@ import de.rwth.idsg.steve.integration.dto.ChargingLimitResponse;
 import de.rwth.idsg.steve.ocpp.RequestResult;
 import de.rwth.idsg.steve.ocpp.CommunicationTask;
 import de.rwth.idsg.steve.ocpp.OcppTransport;
+import de.rwth.idsg.steve.ocpp.task.GetConfigurationTask;
 import de.rwth.idsg.steve.repository.ChargePointRepository;
 import de.rwth.idsg.steve.repository.ChargingProfileRepository;
 import de.rwth.idsg.steve.repository.TaskStore;
@@ -17,6 +18,7 @@ import de.rwth.idsg.steve.service.ChargePointService16_Client;
 import de.rwth.idsg.steve.utils.mapper.ChargingProfileDetailsMapper;
 import de.rwth.idsg.steve.web.dto.ChargePointQueryForm;
 import de.rwth.idsg.steve.web.dto.ChargingProfileForm;
+import de.rwth.idsg.steve.web.dto.ocpp.GetConfigurationParams;
 import de.rwth.idsg.steve.web.dto.ocpp.RemoteStartTransactionParams;
 import de.rwth.idsg.steve.web.dto.ocpp.RemoteStopTransactionParams;
 import de.rwth.idsg.steve.web.dto.ocpp.SetChargingProfileParams;
@@ -268,5 +270,35 @@ public class IntegrationController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
         return ResponseEntity.ok().body(chargeBoxOverview.get(0));
+    }
+
+
+   @RequestMapping(value="/chargepoints/{chargeBoxId}/configuration", method = RequestMethod.GET)
+    public ResponseEntity<String> getChargeBoxConfiguration(@PathVariable String chargeBoxId) throws InterruptedException {
+        boolean connected = chargePointHelperService.isConnected(chargeBoxId);
+        if(!connected) {
+            log.warn("Charge box " + chargeBoxId + " is not connected");
+            return ResponseEntity.badRequest().body("not connected");
+        }
+        GetConfigurationParams params = new GetConfigurationParams();
+        List<ChargePointSelect> chargePointList = new ArrayList<>();
+       /* ChargePoint chargePoint = new ChargePoint();
+        ChargePoint.Overview.builder().chargeBoxId(chargeBoxId);
+        chargePointList.add(chargePoint);
+        */
+       chargePointList.add(new ChargePointSelect(OcppTransport.JSON, chargeBoxId));
+       params.setChargePointSelectList(chargePointList);
+       int taskId = client16.getConfiguration(params);
+       log.warn("Task created for configuration " + taskId);
+
+       Thread.sleep(5000);
+
+       CommunicationTask task = taskStore.get(taskId);
+
+
+       ((GetConfigurationTask.ResponseWrapper)((RequestResult)task.getResultMap().get(chargeBoxId)).getDetails()).getConfigurationKeys().forEach(entry -> log.warn("Configuration task found: " +
+               entry.getKey() + ":" +entry.getValue() + " read only: "+entry.isReadonly()));
+       return ResponseEntity.ok(((GetConfigurationTask.ResponseWrapper)((RequestResult)task.getResultMap().get(chargeBoxId)).getDetails()).getConfigurationKeys().toString());
+
     }
 }
