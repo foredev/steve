@@ -313,7 +313,7 @@ public class IntegrationController {
         return ResponseEntity.ok(((GetConfigurationTask.ResponseWrapper)((RequestResult)task.getResultMap().get(chargeBoxId)).getDetails()).getConfigurationKeys());
     }
 
-    @RequestMapping(value="/chargepoints/{chargingProfilePk}", method = RequestMethod.DELETE)
+    @RequestMapping(value="/chargingprofile/{chargingProfilePk}", method = RequestMethod.DELETE)
     public ResponseEntity<Boolean> deleteChargingProfile(@PathVariable int chargingProfilePk) {
         List<String> chargingPoints = chargingProfileRepository.isChargingProfileUsed(chargingProfilePk);
         if(!chargingPoints.isEmpty()) {
