@@ -116,6 +116,15 @@ public class IntegrationController {
 
     @RequestMapping(value= "/chargingprofile", method = RequestMethod.POST, consumes = "application/json")
     public ResponseEntity<ChargingProfileForm> createChargingProfile(@RequestBody ChargingProfileForm request) {
+        //Null checker on mandatory values
+        if(request.getChargingProfileKind() == null ||
+            request.getStackLevel() == null ||
+            request.getChargingProfilePurpose() == null ||
+            request.getChargingRateUnit() == null ||
+            request.getSchedulePeriodMap().isEmpty()) {
+                return ResponseEntity.badRequest().body(null);
+        }
+
         int chargingProfileId = chargingProfileRepository.add(request);
 
         return ResponseEntity.ok(ChargingProfileDetailsMapper.mapToForm(chargingProfileRepository.getDetails(chargingProfileId)));
