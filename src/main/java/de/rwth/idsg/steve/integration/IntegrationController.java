@@ -17,6 +17,7 @@ import de.rwth.idsg.steve.service.ChargePointHelperService;
 import de.rwth.idsg.steve.service.ChargePointService16_Client;
 import de.rwth.idsg.steve.utils.mapper.ChargingProfileDetailsMapper;
 import de.rwth.idsg.steve.web.dto.ChargePointQueryForm;
+import de.rwth.idsg.steve.web.dto.ChargingProfileAssignmentQueryForm;
 import de.rwth.idsg.steve.web.dto.ChargingProfileForm;
 import de.rwth.idsg.steve.web.dto.ocpp.GetConfigurationParams;
 import de.rwth.idsg.steve.web.dto.ocpp.RemoteStartTransactionParams;
@@ -114,9 +115,10 @@ public class IntegrationController {
     }
 
     @RequestMapping(value= "/chargingprofile", method = RequestMethod.POST, consumes = "application/json")
-    public ResponseEntity<ChargingProfileResponse> createChargingProfile(@RequestBody ChargingProfileForm request) {
+    public ResponseEntity<ChargingProfileForm> createChargingProfile(@RequestBody ChargingProfileForm request) {
         int chargingProfileId = chargingProfileRepository.add(request);
-        return ResponseEntity.ok(new ChargingProfileResponse(true, chargingProfileId));
+
+        return ResponseEntity.ok(ChargingProfileDetailsMapper.mapToForm(chargingProfileRepository.getDetails(chargingProfileId)));
     }
 
     @RequestMapping(value = "/chargingprofile/{chargingProfilePk}", method = RequestMethod.GET)
@@ -126,6 +128,27 @@ public class IntegrationController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
 
+        ChargingProfileForm form = ChargingProfileDetailsMapper.mapToForm(details);
+        return ResponseEntity.ok(form);
+    }
+
+    @RequestMapping(value="/chargingprofile/{chargingProfilePk}", method = RequestMethod.POST, consumes ="application/json")
+    public ResponseEntity<ChargingProfileForm> updateChargingProfile(@PathVariable int chargingProfilePk, @RequestBody ChargingProfileForm request) {
+        List<String> chargingBoxes = chargingProfileRepository.isChargingProfileUsed(chargingProfilePk);
+        List<ChargingProfileAssignment> profileUsage = new ArrayList<>();
+        for(String chargingBoxId : chargingBoxes) {
+            ChargingProfileAssignmentQueryForm useProfile = new ChargingProfileAssignmentQueryForm();
+            useProfile.setChargingProfilePk(chargingProfilePk);
+            useProfile.setChargeBoxId(chargingBoxId);
+            profileUsage.addAll(chargingProfileRepository.getAssignments(useProfile));
+        }
+        profileUsage.forEach(entry -> chargingProfileRepository.clearProfile(chargingProfilePk, entry.getChargeBoxId()));
+
+        chargingProfileRepository.update(request);
+        for(ChargingProfileAssignment useProfile: profileUsage) {
+            chargingProfileRepository.setProfile(useProfile.getChargingProfilePk(), useProfile.getChargeBoxId(), useProfile.getConnectorId());
+        }
+        ChargingProfile.Details details = chargingProfileRepository.getDetails(chargingProfilePk);
         ChargingProfileForm form = ChargingProfileDetailsMapper.mapToForm(details);
         return ResponseEntity.ok(form);
     }
@@ -272,7 +295,6 @@ public class IntegrationController {
         return ResponseEntity.ok().body(chargeBoxOverview.get(0));
     }
 
-
    @RequestMapping(value="/chargepoints/{chargeBoxId}/configuration", method = RequestMethod.GET)
     public ResponseEntity<List<GetConfigurationTask.KeyValue>> getChargeBoxConfiguration(@PathVariable String chargeBoxId) throws InterruptedException {
         boolean connected = chargePointHelperService.isConnected(chargeBoxId);
@@ -283,16 +305,24 @@ public class IntegrationController {
         GetConfigurationParams params = new GetConfigurationParams();
         List<ChargePointSelect> chargePointList = new ArrayList<>();
 
-       chargePointList.add(new ChargePointSelect(OcppTransport.JSON, chargeBoxId));
-       params.setChargePointSelectList(chargePointList);
-       int taskId = client16.getConfiguration(params);
-
-       Thread.sleep(5000);
-
-       CommunicationTask task = taskStore.get(taskId);
-
-
-       return ResponseEntity.ok(((GetConfigurationTask.ResponseWrapper)((RequestResult)task.getResultMap().get(chargeBoxId)).getDetails()).getConfigurationKeys());
-
+        chargePointList.add(new ChargePointSelect(OcppTransport.JSON, chargeBoxId));
+        params.setChargePointSelectList(chargePointList);
+        int taskId = client16.getConfiguration(params);
+        Thread.sleep(5000);
+        CommunicationTask task = taskStore.get(taskId);
+        return ResponseEntity.ok(((GetConfigurationTask.ResponseWrapper)((RequestResult)task.getResultMap().get(chargeBoxId)).getDetails()).getConfigurationKeys());
     }
+
+    @RequestMapping(value="/chargepoints/{chargingProfilePk}", method = RequestMethod.DELETE)
+    public ResponseEntity<Boolean> deleteChargingProfile(@PathVariable int chargingProfilePk) {
+        List<String> chargingPoints = chargingProfileRepository.isChargingProfileUsed(chargingProfilePk);
+        if(!chargingPoints.isEmpty()) {
+            for(String chargingBoxId : chargingPoints) {
+                chargingProfileRepository.clearProfile(chargingProfilePk,chargingBoxId);
+            }
+        }
+        chargingProfileRepository.delete(chargingProfilePk);
+        return ResponseEntity.ok(true);
+    }
+
 }
