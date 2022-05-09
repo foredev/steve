@@ -121,7 +121,10 @@ public class IntegrationController {
             request.getStackLevel() == null ||
             request.getChargingProfilePurpose() == null ||
             request.getChargingRateUnit() == null ||
-            request.getSchedulePeriodMap().isEmpty()) {
+            request.getSchedulePeriodMap().isEmpty() ||
+            !request.isFromToValid() ||
+            !request.isStartScheduleValid() ||
+            !request.isFromToAndProfileSettingCorrect()) {
                 return ResponseEntity.badRequest().body(null);
         }
 
@@ -162,7 +165,7 @@ public class IntegrationController {
         return ResponseEntity.ok(form);
     }
 
-    @RequestMapping(value="/chargepoints/{chargeBoxId}/{connectorId}/{chargingProfileId}", method=RequestMethod.DELETE)
+    @RequestMapping(value="/chargingprofile/{chargeBoxId}/{connectorId}/{chargingProfileId}", method=RequestMethod.DELETE)
     public ResponseEntity<ChargingProfileResponse> clearChargingProfile(@PathVariable String chargeBoxId, @PathVariable int connectorId, @PathVariable int chargingProfileId) {
         boolean connected = chargePointHelperService.isConnected(chargeBoxId);
         if(!connected) {
@@ -177,7 +180,7 @@ public class IntegrationController {
         return ResponseEntity.ok(new ChargingProfileResponse(true, chargingProfileId));
     }
 
-    @RequestMapping(value = "/chargepoints/{chargeBoxId}/{connectorId}/{chargingProfileId}", method = RequestMethod.GET)
+    @RequestMapping(value = "/chargingprofile/{chargeBoxId}/{connectorId}/{chargingProfileId}", method = RequestMethod.GET)
     public ResponseEntity<ChargingProfileResponse> setChargingProfile(@PathVariable String chargeBoxId, @PathVariable int connectorId, @PathVariable int chargingProfileId) {
         boolean connected = chargePointHelperService.isConnected(chargeBoxId);
         if (!connected) {
