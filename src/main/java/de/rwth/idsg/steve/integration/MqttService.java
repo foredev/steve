@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.util.StdDateFormat;
 import de.rwth.idsg.steve.SteveConfiguration;
+import de.rwth.idsg.steve.integration.dto.ConnectorStatus;
 import de.rwth.idsg.steve.integration.dto.EnergyMeterData;
 import de.rwth.idsg.steve.ocpp.ws.JsonObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -54,7 +55,7 @@ public class MqttService {
         sendToMqttBroker("ocpp/" + chargeBoxId + "/" + connector + "/em", payloadNode);
     }
 
-    public void publishChargeBoxStatus(String chargeBoxId, String connector, String status){
+    public void publishChargeBoxStatus(String chargeBoxId, String connector, ConnectorStatus status){
         JsonNode payloadNode;
         payloadNode = mapper.valueToTree(status);
         sendToMqttBroker("ocpp/" + chargeBoxId + "/" + connector + "/status", payloadNode);

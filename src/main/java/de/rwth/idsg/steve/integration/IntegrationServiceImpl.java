@@ -1,5 +1,6 @@
 package de.rwth.idsg.steve.integration;
 
+import de.rwth.idsg.steve.integration.dto.ConnectorStatus;
 import de.rwth.idsg.steve.integration.dto.EnergyMeterData;
 import ocpp.cs._2015._10.*;
 import org.springframework.stereotype.Service;
@@ -85,7 +86,7 @@ public class IntegrationServiceImpl implements IntegrationService {
                 .map(sampledValue -> Double.valueOf(sampledValue.getValue()));
     }
 
-    public void chargingBoxStatus(String chargeBoxIdentity, int connectorIdentity, String status) {
+    public void chargingBoxStatus(String chargeBoxIdentity, int connectorIdentity, ConnectorStatus status) {
         mqttService.publishChargeBoxStatus(chargeBoxIdentity, Integer.toString(connectorIdentity), status);
     }
 }

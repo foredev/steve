@@ -19,6 +19,7 @@
 package de.rwth.idsg.steve.service;
 
 import de.rwth.idsg.steve.integration.IntegrationService;
+import de.rwth.idsg.steve.integration.dto.ConnectorStatus;
 import de.rwth.idsg.steve.ocpp.OcppProtocol;
 import de.rwth.idsg.steve.repository.OcppServerRepository;
 import de.rwth.idsg.steve.repository.SettingsRepository;
@@ -27,6 +28,7 @@ import de.rwth.idsg.steve.repository.dto.InsertTransactionParams;
 import de.rwth.idsg.steve.repository.dto.UpdateChargeboxParams;
 import de.rwth.idsg.steve.repository.dto.UpdateTransactionParams;
 import jooq.steve.db.enums.TransactionStopEventActor;
+import jooq.steve.db.tables.Connector;
 import lombok.extern.slf4j.Slf4j;
 import ocpp.cs._2015._10.AuthorizationStatus;
 import ocpp.cs._2015._10.AuthorizeRequest;
@@ -144,7 +146,9 @@ public class CentralSystemService16_Service {
             notificationService.ocppStationStatusFailure(
                     chargeBoxIdentity, parameters.getConnectorId(), parameters.getErrorCode().value());
         }
-        integrationService.chargingBoxStatus(chargeBoxIdentity, parameters.getConnectorId(), parameters.getStatus().value());
+        ConnectorStatus status = new ConnectorStatus();
+        status.setStatus(parameters.getStatus().toString());
+        integrationService.chargingBoxStatus(chargeBoxIdentity, parameters.getConnectorId(), status);
 
         return new StatusNotificationResponse();
     }
