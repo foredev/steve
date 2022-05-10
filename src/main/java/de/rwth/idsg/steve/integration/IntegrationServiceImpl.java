@@ -84,4 +84,8 @@ public class IntegrationServiceImpl implements IntegrationService {
                 .findFirst()
                 .map(sampledValue -> Double.valueOf(sampledValue.getValue()));
     }
+
+    public void chargingBoxStatus(String chargeBoxIdentity, int connectorIdentity, String status) {
+        mqttService.publishChargeBoxStatus(chargeBoxIdentity, Integer.toString(connectorIdentity), status);
+    }
 }

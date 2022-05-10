@@ -144,6 +144,7 @@ public class CentralSystemService16_Service {
             notificationService.ocppStationStatusFailure(
                     chargeBoxIdentity, parameters.getConnectorId(), parameters.getErrorCode().value());
         }
+        integrationService.chargingBoxStatus(chargeBoxIdentity, parameters.getConnectorId(), parameters.getStatus().value());
 
         return new StatusNotificationResponse();
     }

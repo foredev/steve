@@ -50,14 +50,24 @@ public class MqttService {
 
     public void publishEnergyMeterData(String chargeBoxId, String connector, EnergyMeterData data) {
         JsonNode payloadNode;
-        try {
-            payloadNode = mapper.valueToTree(data);
+        payloadNode = mapper.valueToTree(data);
+        sendToMqttBroker("ocpp/" + chargeBoxId + "/" + connector + "/em", payloadNode);
+    }
 
-            MqttMessage mqttMessage = new MqttMessage(payloadNode.toString().getBytes(StandardCharsets.UTF_8));
+    public void publishChargeBoxStatus(String chargeBoxId, String connector, String status){
+        JsonNode payloadNode;
+        payloadNode = mapper.valueToTree(status);
+        sendToMqttBroker("ocpp/" + chargeBoxId + "/" + connector + "/status", payloadNode);
+    }
+
+    public void sendToMqttBroker(String path, JsonNode payload) {
+        try {
+
+            MqttMessage mqttMessage = new MqttMessage(payload.toString().getBytes(StandardCharsets.UTF_8));
             mqttMessage.setQos(0);
             mqttMessage.setRetained(false);
 
-            mqttClient.publish("ocpp/" + chargeBoxId + "/" + connector + "/em", mqttMessage);
+            mqttClient.publish(path, mqttMessage);
         } catch (IllegalArgumentException e) {
             log.error("Failed to serialize energy meter data", e);
         } catch (MqttException e) {
