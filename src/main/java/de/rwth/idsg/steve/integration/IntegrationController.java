@@ -187,10 +187,19 @@ public class IntegrationController {
             log.warn("Charge box " + chargeBoxId + " is not connected");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ChargingProfileResponse(false, "Charge box " + chargeBoxId + " is not connected"));
         }
+        //Check if charging profile is in use for this chargebox ID
+        ChargingProfileAssignmentQueryForm useProfile = new ChargingProfileAssignmentQueryForm();
+        useProfile.setChargingProfilePk(chargingProfileId);
+        useProfile.setChargeBoxId(chargeBoxId);
 
-        int taskId = sendChargingProfile(chargeBoxId, connectorId, chargingProfileId);
+        //Return OK in both cases, if the charging profile is in use it's still the wanted result.
+        if(chargingProfileRepository.getAssignments(useProfile).isEmpty()) {
+            int taskId = sendChargingProfile(chargeBoxId, connectorId, chargingProfileId);
+            return ResponseEntity.ok(new ChargingProfileResponse(true, chargingProfileId));
+        } else {
+            return ResponseEntity.ok(new ChargingProfileResponse(false, "Charging profile in use"));
+        }
 
-        return ResponseEntity.ok(new ChargingProfileResponse(true, chargingProfileId));
     }
 
     private int sendChargingProfile(String chargeBoxId, int connectorId, int chargingProfileId) {
@@ -245,7 +254,7 @@ public class IntegrationController {
 
         Optional<Transaction> optionalTransaction = transactions
                 .stream()
-                .filter(transaction -> transaction.getConnectorId() == connectorId)
+                .filter(transaction -> (transaction.getConnectorId() == connectorId || connectorId == 0))
                 .findFirst();
 
         if (optionalTransaction.isEmpty()) {
@@ -277,6 +286,16 @@ public class IntegrationController {
         if (!connected) {
             log.warn("Charge box " + chargeBoxId + " is not connected");
             return ResponseEntity.badRequest().body(false);
+        }
+
+        List<Integer> activeTransactions = transactionRepository.getActiveTransactionIds(chargeBoxId);
+
+        if(!activeTransactions.isEmpty()) {
+            for(Integer transaction : activeTransactions) {
+                if(transactionRepository.getDetails(transaction).getTransaction().getConnectorId() == connectorId) {
+                    return ResponseEntity.badRequest().body(false);
+                }
+            }
         }
 
         chargePointSelectList.add(chargePointSelect);
