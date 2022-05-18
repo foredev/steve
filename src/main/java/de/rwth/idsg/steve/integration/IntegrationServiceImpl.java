@@ -37,7 +37,9 @@ public class IntegrationServiceImpl implements IntegrationService {
             Optional<Double> energy = getEnergy(sampledValues);
             energy.ifPresent(data::setEnergy);
 
-            mqttService.publishEnergyMeterData(chargeBoxIdentity, Integer.toString(request.getConnectorId()), data);
+            if(data.eligibleToSend()) {
+                mqttService.publishEnergyMeterData(chargeBoxIdentity, Integer.toString(request.getConnectorId()), data);
+            }
         }
     }
 
