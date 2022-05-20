@@ -72,6 +72,12 @@ public class OcppWebSocketHandshakeHandler implements HandshakeHandler {
             chargeBoxId = chargeBoxId.replace("CentralSystemService", "");
         }
 
+        if (chargeBoxId.isEmpty()) {
+            log.error("ChargeBoxId '{}' was empty.", chargeBoxId);
+            response.setStatusCode(HttpStatus.UNAUTHORIZED);
+            return false;
+        }
+
         Optional<RegistrationStatus> status = chargePointHelperService.getRegistrationStatus(chargeBoxId);
 
         // Allow connections, if station is in db (registration_status field from db does not matter)
