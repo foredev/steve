@@ -15,4 +15,13 @@ public class EnergyMeterData {
     private List<Double> voltage;
     private double frequency;
     private Date timestamp;
+
+    public boolean eligibleToSend() {
+        if(!current.isEmpty() || energy != 0 || power != 0 ||
+                !voltage.isEmpty() || frequency != 0) {
+            return true;
+        } else {
+            return false;
+        }
+    }
 }

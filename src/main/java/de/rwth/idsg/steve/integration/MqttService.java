@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.util.StdDateFormat;
 import de.rwth.idsg.steve.SteveConfiguration;
+import de.rwth.idsg.steve.integration.dto.ConnectorStatus;
 import de.rwth.idsg.steve.integration.dto.EnergyMeterData;
 import de.rwth.idsg.steve.ocpp.ws.JsonObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -50,14 +51,24 @@ public class MqttService {
 
     public void publishEnergyMeterData(String chargeBoxId, String connector, EnergyMeterData data) {
         JsonNode payloadNode;
-        try {
-            payloadNode = mapper.valueToTree(data);
+        payloadNode = mapper.valueToTree(data);
+        sendToMqttBroker("ocpp/" + chargeBoxId + "/" + connector + "/em", payloadNode);
+    }
 
-            MqttMessage mqttMessage = new MqttMessage(payloadNode.toString().getBytes(StandardCharsets.UTF_8));
+    public void publishChargeBoxStatus(String chargeBoxId, String connector, ConnectorStatus status){
+        JsonNode payloadNode;
+        payloadNode = mapper.valueToTree(status);
+        sendToMqttBroker("ocpp/" + chargeBoxId + "/" + connector + "/status", payloadNode);
+    }
+
+    public void sendToMqttBroker(String path, JsonNode payload) {
+        try {
+
+            MqttMessage mqttMessage = new MqttMessage(payload.toString().getBytes(StandardCharsets.UTF_8));
             mqttMessage.setQos(0);
             mqttMessage.setRetained(false);
 
-            mqttClient.publish("ocpp/" + chargeBoxId + "/" + connector + "/em", mqttMessage);
+            mqttClient.publish(path, mqttMessage);
         } catch (IllegalArgumentException e) {
             log.error("Failed to serialize energy meter data", e);
         } catch (MqttException e) {

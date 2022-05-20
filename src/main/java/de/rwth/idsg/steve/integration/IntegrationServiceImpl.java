@@ -1,12 +1,12 @@
 package de.rwth.idsg.steve.integration;
 
+import de.rwth.idsg.steve.integration.dto.ConnectorStatus;
 import de.rwth.idsg.steve.integration.dto.EnergyMeterData;
 import ocpp.cs._2015._10.*;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,28 +36,48 @@ public class IntegrationServiceImpl implements IntegrationService {
             Optional<Double> energy = getEnergy(sampledValues);
             energy.ifPresent(data::setEnergy);
 
-            mqttService.publishEnergyMeterData(chargeBoxIdentity, Integer.toString(request.getConnectorId()), data);
+            if(data.eligibleToSend()) {
+                mqttService.publishEnergyMeterData(chargeBoxIdentity, Integer.toString(request.getConnectorId()), data);
+            }
         }
     }
 
-    private List<Double> getCurrentImport(List<SampledValue> sampledValues) {
-        return sampledValues
+    private List<Double> getCurrentImport(@NotNull List<SampledValue> sampledValues) {
+        List<Double> returnValues = Arrays.asList(0.0, 0.0, 0.0);
+        List<SampledValue> sorted = sampledValues
                 .stream()
                 .filter(sampledValue -> sampledValue.getMeasurand() == Measurand.CURRENT_IMPORT)
                 .filter(sampledValue -> sampledValue.getUnit() == UnitOfMeasure.A)
                 .sorted(Comparator.comparing(SampledValue::getPhase))
-                .map(sampledValue -> Double.valueOf(sampledValue.getValue()))
                 .collect(Collectors.toList());
+
+        for(int i = 0; i<3; i++) {
+            for(SampledValue sample : sorted) {
+                if(sample.getPhase().value().contains(Integer.toString(i+1))) {
+                    returnValues.set(i, Double.valueOf(sample.getValue()));
+                }
+            }
+        }
+        return returnValues;
     }
 
-    public List<Double> getVoltage(List<SampledValue> sampledValues) {
-        return sampledValues
+    public List<Double> getVoltage(@NotNull List<SampledValue> sampledValues) {
+        List<Double> returnValues = Arrays.asList(0.0, 0.0, 0.0);
+        List<SampledValue> sorted = sampledValues
                 .stream()
                 .filter(sampledValue -> sampledValue.getMeasurand() == Measurand.VOLTAGE)
                 .filter(sampledValue -> sampledValue.getUnit() == UnitOfMeasure.V)
                 .sorted(Comparator.comparing(SampledValue::getPhase))
-                .map(sampledValue -> Double.valueOf(sampledValue.getValue()))
                 .collect(Collectors.toList());
+
+        for(int i = 0; i<3; i++) {
+            for(SampledValue sample : sorted) {
+                if(sample.getPhase().value().contains(Integer.toString(i+1))) {
+                    returnValues.set(i, Double.valueOf(sample.getValue()));
+                }
+            }
+        }
+        return returnValues;
     }
 
     /*
@@ -83,5 +103,9 @@ public class IntegrationServiceImpl implements IntegrationService {
                 .filter(sampledValue -> sampledValue.getUnit() == UnitOfMeasure.WH)
                 .findFirst()
                 .map(sampledValue -> Double.valueOf(sampledValue.getValue()));
+    }
+
+    public void chargingBoxStatus(String chargeBoxIdentity, int connectorIdentity, ConnectorStatus status) {
+        mqttService.publishChargeBoxStatus(chargeBoxIdentity, Integer.toString(connectorIdentity), status);
     }
 }
