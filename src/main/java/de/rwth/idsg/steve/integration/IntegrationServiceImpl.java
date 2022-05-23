@@ -30,7 +30,12 @@ public class IntegrationServiceImpl implements IntegrationService {
             EnergyMeterData data = new EnergyMeterData();
             data.setVoltage(voltage);
             data.setCurrent(currentImport);
-            data.setPower(getPower(currentImport, voltage));
+            List<Double> power = getPower(sampledValues);
+            if(power.isEmpty()) {
+                data.setPower(getCalculatedPower(currentImport, voltage));
+            } else {
+                data.setPower(power.stream().findFirst().get());
+            }
             data.setTimestamp(meterValue.getTimestamp().toDate());
 
             Optional<Double> energy = getEnergy(sampledValues);
@@ -80,10 +85,18 @@ public class IntegrationServiceImpl implements IntegrationService {
         return returnValues;
     }
 
+    public List<Double> getPower(List<SampledValue> sampledValues) {
+        return sampledValues.stream()
+                .filter(sampledValue -> sampledValue.getMeasurand() == Measurand.POWER_ACTIVE_IMPORT)
+                .filter(sampledValue -> Double.valueOf(sampledValue.getValue()) > 0)
+                .map(sampledValue -> Double.valueOf(sampledValue.getValue()))
+                .collect(Collectors.toList());
+    }
+
     /*
      * Assumes that the charge box only returns current and voltage, not power
      */
-    public double getPower(List<Double> current, List<Double> voltage) {
+    public double getCalculatedPower(List<Double> current, List<Double> voltage) {
         if (current.size() != voltage.size()) {
             return 0;
         }
