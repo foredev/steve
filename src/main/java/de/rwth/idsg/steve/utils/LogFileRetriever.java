@@ -62,8 +62,20 @@ public enum LogFileRetriever {
         return Optional.ofNullable(p);
     }
 
-    public String getLogFilePathOrErrorMessage() {
-        return getPath().map(path -> path.toAbsolutePath().toString())
+    public Optional<Path> getPath(String fileName) {
+        Path p = null;
+        if (!logPathList.isEmpty()) {
+            for (Path path : logPathList) {
+                if (path.getFileName().toString().contains(fileName)) {
+                    p = path;
+                }
+            }
+        }
+        return Optional.ofNullable(p);
+    }
+
+    public String getLogFilePathOrErrorMessage(String fileName) {
+        return getPath(fileName).map(path -> path.toAbsolutePath().toString())
                         .orElseGet(this::getErrorMessage);
     }
 
