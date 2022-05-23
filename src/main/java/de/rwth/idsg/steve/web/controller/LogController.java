@@ -46,7 +46,7 @@ public class LogController {
         response.setContentType("text/plain");
 
         try (PrintWriter writer = response.getWriter()) {
-            Optional<Path> p = LogFileRetriever.INSTANCE.getPath();
+            Optional<Path> p = LogFileRetriever.INSTANCE.getPath("steve.log");
             if (p.isPresent()) {
                 Files.lines(p.get(), StandardCharsets.UTF_8)
                      .forEach(writer::println);
@@ -57,9 +57,24 @@ public class LogController {
             log.error("Exception happened", e);
         }
     }
+    @RequestMapping(value = "/errorLog", method = RequestMethod.GET)
+    public void errorLog(HttpServletResponse response) {
+        response.setContentType("text/plain");
 
-    public String getLogFilePath() {
-        return LogFileRetriever.INSTANCE.getLogFilePathOrErrorMessage();
+        try (PrintWriter writer = response.getWriter()) {
+            Optional<Path> p = LogFileRetriever.INSTANCE.getPath("steve.error.log");
+            if (p.isPresent()) {
+                Files.lines(p.get(), StandardCharsets.UTF_8)
+                        .forEach(writer::println);
+            } else {
+                writer.write(LogFileRetriever.INSTANCE.getErrorMessage());
+            }
+        } catch (IOException e) {
+            log.error("Exception happened", e);
+        }
+    }
+    public String getLogFilePath(String fileName) {
+        return LogFileRetriever.INSTANCE.getLogFilePathOrErrorMessage(fileName);
     }
 
 }
