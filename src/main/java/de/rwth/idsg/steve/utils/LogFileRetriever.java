@@ -64,9 +64,9 @@ public enum LogFileRetriever {
 
     public Optional<Path> getPath(String fileName) {
         Path p = null;
-        if(!logPathList.isEmpty()) {
-            for(Path path : logPathList) {
-                if(path.getFileName().toString().contains(fileName)) {
+        if (!logPathList.isEmpty()) {
+            for (Path path : logPathList) {
+                if (path.getFileName().toString().contains(fileName)) {
                     p = path;
                 }
             }

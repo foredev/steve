@@ -69,8 +69,8 @@ public class AboutSettingsController {
     public String getAbout(Model model) {
         model.addAttribute("version", CONFIG.getSteveVersion());
         model.addAttribute("db", genericRepository.getDBVersion());
-        model.addAttribute("logFile", logController.getLogFilePath("steve.log"));
-        model.addAttribute("errorLogFile", logController.getLogFilePath("steve.error.log"));
+        model.addAttribute("logFile", logController.getLogFilePath());
+        model.addAttribute("errorLogFile", logController.getErrorLogFilePath());
         model.addAttribute("systemTime", DateTime.now());
         model.addAttribute("systemTimeZone", DateTimeZone.getDefault());
         model.addAttribute("releaseReport", releaseCheckService.check());
