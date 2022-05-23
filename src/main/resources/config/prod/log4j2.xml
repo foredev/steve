@@ -35,29 +35,20 @@
     <Loggers>
         <!-- Disable the Jooq logo in logs -->
         <!-- https://github.com/jOOQ/jOOQ/issues/4019 -->
-        <AsyncLogger name="org.jooq.Constants" level="WARN" >
-            <AppenderRef ref="ERROR"/>
-            <AppenderRef ref="FILE"/>
-        </AsyncLogger>
+        <AsyncLogger name="org.apache.cxf" level="INFO"/>
+        <AsyncLogger name="org.eclipse.jetty" level="INFO"/>
+        <AsyncLogger name="com.zaxxer.hikari" level="INFO"/>
+        <AsyncLogger name="org.springframework" level="INFO"/>
+        <AsyncLogger name="org.springframework.security" level="INFO"/>
+        <AsyncLogger name="org.springframework.web.servlet" level="INFO"/>
 
-        <AsyncLogger name="org.apache.jasper" level="WARN" >
-            <AppenderRef ref="ERROR"/>
-            <AppenderRef ref="FILE"/>
-        </AsyncLogger>
-        <AsyncLogger name="org.apache.tomcat.util" level="WARN" >
-            <AppenderRef ref="ERROR"/>
-            <AppenderRef ref="FILE"/>
-        </AsyncLogger>
-        <AsyncLogger name="jndi" level="WARN" >
-            <AppenderRef ref="ERROR"/>
-            <AppenderRef ref="FILE"/>
-        </AsyncLogger>
         <AsyncLogger name="org.springframework" level="WARN">
             <AppenderRef ref="ERROR"/>
             <AppenderRef ref="FILE" />
         </AsyncLogger>
         <AsyncLogger name="de.rwth.idsg.steve" level="WARN">
             <AppenderRef ref="ERROR"/>
+            <AppenderRef ref="FILE" />
         </AsyncLogger>
 
         <AsyncRoot level="INFO">
