@@ -70,12 +70,7 @@
                         </ul>
                     </li>
                     <li><a href="${ctxPath}/manager/settings">SETTINGS</a></li>
-                    <li><a>LOG FILES &raquo;</a>
-                        <ul>
-                            <li><a href="${ctxPath}/manager/log">INFO</a></li>
-                            <li><a href="${ctxPath}/manager/errorLog">ERROR</a></li>
-                        </ul>
-                    </li>
+                    <li><a href="${ctxPath}/manager/log">LOG</a></li>
                     <li><a href="${ctxPath}/manager/about">ABOUT</a></li>
                     <li><a href="${ctxPath}/manager/signout">SIGN OUT</a></li>
                 </ul>
