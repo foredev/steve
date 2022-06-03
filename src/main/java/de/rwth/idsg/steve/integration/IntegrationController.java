@@ -19,10 +19,7 @@ import de.rwth.idsg.steve.utils.mapper.ChargingProfileDetailsMapper;
 import de.rwth.idsg.steve.web.dto.ChargePointQueryForm;
 import de.rwth.idsg.steve.web.dto.ChargingProfileAssignmentQueryForm;
 import de.rwth.idsg.steve.web.dto.ChargingProfileForm;
-import de.rwth.idsg.steve.web.dto.ocpp.GetConfigurationParams;
-import de.rwth.idsg.steve.web.dto.ocpp.RemoteStartTransactionParams;
-import de.rwth.idsg.steve.web.dto.ocpp.RemoteStopTransactionParams;
-import de.rwth.idsg.steve.web.dto.ocpp.SetChargingProfileParams;
+import de.rwth.idsg.steve.web.dto.ocpp.*;
 import jdk.jfr.ContentType;
 import lombok.extern.slf4j.Slf4j;
 import ocpp.cp._2015._10.ChargingProfileKindType;
@@ -35,6 +32,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.Trigger;
 import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -148,7 +146,7 @@ public class IntegrationController {
     public ResponseEntity<ChargingProfileForm> updateChargingProfile(@PathVariable int chargingProfilePk, @RequestBody ChargingProfileForm request) {
         List<String> chargingBoxes = chargingProfileRepository.isChargingProfileUsed(chargingProfilePk);
         List<ChargingProfileAssignment> profileUsage = new ArrayList<>();
-        for(String chargingBoxId : chargingBoxes) {
+        for (String chargingBoxId : chargingBoxes) {
             ChargingProfileAssignmentQueryForm useProfile = new ChargingProfileAssignmentQueryForm();
             useProfile.setChargingProfilePk(chargingProfilePk);
             useProfile.setChargeBoxId(chargingBoxId);
@@ -157,7 +155,7 @@ public class IntegrationController {
         profileUsage.forEach(entry -> chargingProfileRepository.clearProfile(chargingProfilePk, entry.getChargeBoxId()));
 
         chargingProfileRepository.update(request);
-        for(ChargingProfileAssignment useProfile: profileUsage) {
+        for (ChargingProfileAssignment useProfile: profileUsage) {
             chargingProfileRepository.setProfile(useProfile.getChargingProfilePk(), useProfile.getChargeBoxId(), useProfile.getConnectorId());
         }
         ChargingProfile.Details details = chargingProfileRepository.getDetails(chargingProfilePk);
@@ -168,7 +166,7 @@ public class IntegrationController {
     @RequestMapping(value="/chargingprofile/{chargeBoxId}/{connectorId}/{chargingProfileId}", method=RequestMethod.DELETE)
     public ResponseEntity<ChargingProfileResponse> clearChargingProfile(@PathVariable String chargeBoxId, @PathVariable int connectorId, @PathVariable int chargingProfileId) {
         boolean connected = chargePointHelperService.isConnected(chargeBoxId);
-        if(!connected) {
+        if (!connected) {
             log.warn("Charge box " + chargeBoxId + " is not connected");
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ChargingProfileResponse(false, "Charge box " +chargeBoxId + " is not connected"));
         }
@@ -193,7 +191,7 @@ public class IntegrationController {
         useProfile.setChargeBoxId(chargeBoxId);
 
         //Return OK in both cases, if the charging profile is in use it's still the wanted result.
-        if(chargingProfileRepository.getAssignments(useProfile).isEmpty()) {
+        if (chargingProfileRepository.getAssignments(useProfile).isEmpty()) {
             int taskId = sendChargingProfile(chargeBoxId, connectorId, chargingProfileId);
             return ResponseEntity.ok(new ChargingProfileResponse(true, chargingProfileId));
         } else {
@@ -290,7 +288,7 @@ public class IntegrationController {
 
         List<Integer> activeTransactions = transactionRepository.getActiveTransactionIds(chargeBoxId);
 
-        if(!activeTransactions.isEmpty()) {
+        if (!activeTransactions.isEmpty()) {
             for(Integer transaction : activeTransactions) {
                 if(transactionRepository.getDetails(transaction).getTransaction().getConnectorId() == connectorId) {
                     return ResponseEntity.badRequest().body(false);
@@ -329,7 +327,7 @@ public class IntegrationController {
    @RequestMapping(value="/chargepoints/{chargeBoxId}/configuration", method = RequestMethod.GET)
     public ResponseEntity<List<GetConfigurationTask.KeyValue>> getChargeBoxConfiguration(@PathVariable String chargeBoxId) throws InterruptedException {
         boolean connected = chargePointHelperService.isConnected(chargeBoxId);
-        if(!connected) {
+        if (!connected) {
             log.warn("Charge box " + chargeBoxId + " is not connected");
             return ResponseEntity.badRequest().body(null);
         }
@@ -347,12 +345,32 @@ public class IntegrationController {
     @RequestMapping(value="/chargingprofile/{chargingProfilePk}", method = RequestMethod.DELETE)
     public ResponseEntity<Boolean> deleteChargingProfile(@PathVariable int chargingProfilePk) {
         List<String> chargingPoints = chargingProfileRepository.isChargingProfileUsed(chargingProfilePk);
-        if(!chargingPoints.isEmpty()) {
-            for(String chargingBoxId : chargingPoints) {
+        if (!chargingPoints.isEmpty()) {
+            for (String chargingBoxId : chargingPoints) {
                 chargingProfileRepository.clearProfile(chargingProfilePk,chargingBoxId);
             }
         }
         chargingProfileRepository.delete(chargingProfilePk);
+        return ResponseEntity.ok(true);
+    }
+
+    @RequestMapping(value = "/chargepoints/{chargeBoxId}/status", method = RequestMethod.GET)
+    public ResponseEntity<Boolean> triggerStatusUpdate(@PathVariable String chargeBoxId) {
+        boolean connected = chargePointHelperService.isConnected(chargeBoxId);
+        if (!connected) {
+            log.warn("Charge box " + chargeBoxId + " is not connected");
+            return ResponseEntity.badRequest().body(false);
+        }
+        List<ChargePointSelect> chargePointSelectList = new ArrayList<>();
+        TriggerMessageParams message = new TriggerMessageParams();
+        ChargePointSelect chargePointSelect = new ChargePointSelect(OcppTransport.JSON, chargeBoxId);
+        chargePointSelectList.add(chargePointSelect);
+
+        message.setTriggerMessage(TriggerMessageEnum.StatusNotification);
+        message.setChargePointSelectList(chargePointSelectList);
+
+        client16.triggerMessage(message);
+        log.debug("trigger status message " + message.getTriggerMessage().value() + " to connector " +message.getConnectorId());
         return ResponseEntity.ok(true);
     }
 
