@@ -153,7 +153,7 @@ public class ChargePointRepositoryImpl implements ChargePointRepository {
         );
 
         if (form.isSetChargeBoxId()) {
-            selectQuery.addConditions(includes(CHARGE_BOX.CHARGE_BOX_ID, form.getChargeBoxId()));
+            selectQuery.addConditions(CHARGE_BOX.CHARGE_BOX_ID.eq(form.getChargeBoxId()));
         }
         // Default order
         selectQuery.addOrderBy(CHARGE_BOX.CHARGE_BOX_PK.asc());
