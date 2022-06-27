@@ -28,8 +28,6 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <link rel="icon" href="${ctxPath}/static/images/favicon.ico" type="image/x-icon" />
-    <link rel="shortcut icon" href="${ctxPath}/static/images/favicon.ico" type="image/x-icon" />
     <link rel="stylesheet" type="text/css" href="${ctxPath}/static/css/style.css">
     <link rel="stylesheet" type="text/css" href="${ctxPath}/static/css/jquery-ui.min.css">
     <link rel="stylesheet" type="text/css" href="${ctxPath}/static/css/jquery-ui-timepicker-addon.min.css">
@@ -38,13 +36,12 @@
     <script type="text/javascript" src="${ctxPath}/static/js/jquery-ui-timepicker-addon.min.js" ></script>
     <script type="text/javascript" src="${ctxPath}/static/js/script.js" ></script>
     <script type="text/javascript" src="${ctxPath}/static/js/stupidtable.min.js" ></script>
-    <title>SteVe - Steckdosenverwaltung</title>
+    <title>OCPP</title>
 </head>
 <body>
 <div class="main">
     <div class="top-banner">
         <div class="container">
-            <a href="${ctxPath}/manager/home"><img src="${ctxPath}/static/images/logo2.png" height="80"></a>
         </div>
     </div>
     <div class="top-menu">
