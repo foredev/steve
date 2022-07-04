@@ -383,7 +383,10 @@ public class IntegrationController {
             return  ResponseEntity.badRequest().body(null);
         }
         int taskId = 0;
+        List<ChargePointSelect> chargePointSelectList = new ArrayList<>();
+        chargePointSelectList.add(new ChargePointSelect(OcppTransport.JSON, chargeBoxId));
         for(ChangeConfigurationParams confParam : configurations) {
+            confParam.setChargePointSelectList(chargePointSelectList);
             taskId = client16.changeConfiguration(confParam);
         }
 
