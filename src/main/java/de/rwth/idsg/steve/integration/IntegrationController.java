@@ -375,12 +375,11 @@ public class IntegrationController {
     }
 
     @RequestMapping(value="/chargepoints/{chargeBoxId}/changeConfiguration", method = RequestMethod.POST, consumes ="application/json")
-    public ResponseEntity<Map<String, RequestResult>> changeChargeBoxConfiguration(@PathVariable String chargeBoxId, @RequestBody List<ChangeConfigurationParams> configurations) throws InterruptedException {
-
+    public ResponseEntity<Boolean> changeChargeBoxConfiguration(@PathVariable String chargeBoxId, @RequestBody List<ChangeConfigurationParams> configurations) throws InterruptedException {
         boolean connected = chargePointHelperService.isConnected(chargeBoxId);
         if(!connected) {
             log.warn("Charge box" + chargeBoxId + " is not connected");
-            return  ResponseEntity.badRequest().body(null);
+            return  ResponseEntity.badRequest().body(false);
         }
         int taskId = 0;
         List<ChargePointSelect> chargePointSelectList = new ArrayList<>();
@@ -389,9 +388,8 @@ public class IntegrationController {
             confParam.setChargePointSelectList(chargePointSelectList);
             taskId = client16.changeConfiguration(confParam);
         }
-
         Thread.sleep(5000);
-        return ResponseEntity.ok(taskStore.get(taskId).getResultMap());
+        return ResponseEntity.ok(((RequestResult)taskStore.get(taskId).getResultMap().get(chargeBoxId)).getResponse().equals("Accepted") ? true : false);
     }
 
 }
