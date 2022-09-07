@@ -1,13 +1,14 @@
 package de.rwth.idsg.steve.integration;
 
-import de.rwth.idsg.steve.integration.dto.ChargingProfileResponse;
-import de.rwth.idsg.steve.integration.dto.EnergyMeterData;
 import de.rwth.idsg.steve.integration.dto.ChargingLimitRequest;
 import de.rwth.idsg.steve.integration.dto.ChargingLimitResponse;
-import de.rwth.idsg.steve.ocpp.RequestResult;
+import de.rwth.idsg.steve.integration.dto.ChargingProfileResponse;
+import de.rwth.idsg.steve.integration.dto.EnergyMeterData;
 import de.rwth.idsg.steve.ocpp.CommunicationTask;
 import de.rwth.idsg.steve.ocpp.OcppTransport;
+import de.rwth.idsg.steve.ocpp.RequestResult;
 import de.rwth.idsg.steve.ocpp.task.GetConfigurationTask;
+import de.rwth.idsg.steve.ocpp.task.RemoteStartTransactionTask;
 import de.rwth.idsg.steve.repository.ChargePointRepository;
 import de.rwth.idsg.steve.repository.ChargingProfileRepository;
 import de.rwth.idsg.steve.repository.TaskStore;
@@ -20,22 +21,16 @@ import de.rwth.idsg.steve.web.dto.ChargePointQueryForm;
 import de.rwth.idsg.steve.web.dto.ChargingProfileAssignmentQueryForm;
 import de.rwth.idsg.steve.web.dto.ChargingProfileForm;
 import de.rwth.idsg.steve.web.dto.ocpp.*;
-import jdk.jfr.ContentType;
 import lombok.extern.slf4j.Slf4j;
 import ocpp.cp._2015._10.ChargingProfileKindType;
 import ocpp.cp._2015._10.ChargingProfilePurposeType;
 import ocpp.cp._2015._10.ChargingRateUnitType;
-import org.eclipse.jetty.server.Request;
-import org.eclipse.jetty.server.Response;
 import org.joda.time.LocalDateTime;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.scheduling.Trigger;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -240,7 +235,7 @@ public class IntegrationController {
         List<Integer> activeTransactionIds = transactionRepository.getActiveTransactionIds(chargeBoxId);
 
         if (activeTransactionIds.isEmpty()) {
-            log.info("No active transactions for charge box {} and connector {}", chargeBoxId, connectorId);
+            log.warn("[chargeBoxId={}] No active transactions for charge box", chargeBoxId);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(true);
         }
 
@@ -256,10 +251,10 @@ public class IntegrationController {
                 .findFirst();
 
         if (optionalTransaction.isEmpty()) {
+            log.warn("[chargeBoxId={}, connectorId={}] No transaction found", chargeBoxId, connectorId);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(true);
         }
         Transaction transaction = optionalTransaction.get();
-        log.info("Transaction selected: {}", transaction.getId());
 
         List<ChargePointSelect> chargePointSelectList = new ArrayList<>();
         ChargePointSelect chargePointSelect = new ChargePointSelect(OcppTransport.JSON, chargeBoxId);
@@ -271,7 +266,7 @@ public class IntegrationController {
 
         int taskId = client16.remoteStopTransaction(params);
 
-        log.info("[chargeBoxId={}, transactionId={}, taskId={}] Remote stop transaction", chargeBoxId, transaction.getId(), taskId);
+        log.info("[chargeBoxId={}, connectorId={}, transactionId={}, taskId={}] Remote stop transaction", chargeBoxId, connectorId, transaction.getId(), taskId);
         return ResponseEntity.ok(true);
     }
 
@@ -282,15 +277,16 @@ public class IntegrationController {
         boolean connected = chargePointHelperService.isConnected(chargeBoxId);
 
         if (!connected) {
-            log.warn("Charge box " + chargeBoxId + " is not connected");
+            log.warn("[chargeBoxId={}] Charge box not connected", chargeBoxId);
             return ResponseEntity.badRequest().body(false);
         }
 
         List<Integer> activeTransactions = transactionRepository.getActiveTransactionIds(chargeBoxId);
 
         if (!activeTransactions.isEmpty()) {
-            for(Integer transaction : activeTransactions) {
-                if(transactionRepository.getDetails(transaction).getTransaction().getConnectorId() == connectorId) {
+            for (Integer transaction : activeTransactions) {
+                if (transactionRepository.getDetails(transaction).getTransaction().getConnectorId() == connectorId) {
+                    log.warn("[chargeBoxId={}, connectorId={}, transactionId={}] Transaction already active", chargeBoxId, connectorId, transaction);
                     return ResponseEntity.badRequest().body(false);
                 }
             }
@@ -304,11 +300,19 @@ public class IntegrationController {
 
         int taskId = client16.remoteStartTransaction(params);
         Thread.sleep(5000);
-        CommunicationTask transactionTask = taskStore.get(taskId);
+        RemoteStartTransactionTask task = (RemoteStartTransactionTask) taskStore.get(taskId);
 
-        log.warn("[chargeBoxId={}, connectionId={}, idTag={}, taskId={}] Remote start transaction", chargeBoxId, connectorId, tag, taskId);
-        return ResponseEntity.ok(((RequestResult)transactionTask.getResultMap().get(chargeBoxId)).getErrorMessage() != null ? false : true);
+        Map<String, RequestResult> resultMap = task.getResultMap();
+        RequestResult requestResult = resultMap.get(chargeBoxId);
 
+        String errorMessage = requestResult.getErrorMessage();
+        if (errorMessage == null) {
+            log.info("[chargeBoxId={}, connectorId={}] Transaction started on", chargeBoxId, connectorId);
+            return ResponseEntity.ok(null);
+        } else {
+            log.warn("[chargeBoxId={}, connectorId={}] Failed to start transaction with error {}", chargeBoxId, connectorId, errorMessage);
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @RequestMapping(value = "/chargepoints/{chargeBoxId}", method = RequestMethod.GET)
