@@ -305,12 +305,19 @@ public class IntegrationController {
         Map<String, RequestResult> resultMap = task.getResultMap();
         RequestResult requestResult = resultMap.get(chargeBoxId);
 
+        String response = requestResult.getResponse();
         String errorMessage = requestResult.getErrorMessage();
-        if (errorMessage == null) {
-            log.info("[chargeBoxId={}, connectorId={}] Transaction started on", chargeBoxId, connectorId);
+
+        log.info("[chargeBoxId={}, connectorId={}] RemoteStartTransaction response was {}", chargeBoxId, connectorId, response);
+
+        if (response.equals("Accepted")) {
+            log.info("[chargeBoxId={}, connectorId={}] Transaction started", chargeBoxId, connectorId);
             return ResponseEntity.ok(null);
-        } else {
+        } else if (errorMessage != null) {
             log.warn("[chargeBoxId={}, connectorId={}] Failed to start transaction with error {}", chargeBoxId, connectorId, errorMessage);
+            return ResponseEntity.badRequest().build();
+        } else {
+            log.warn("[chargeBoxId={}, connectorId={}] Charge box rejected remote start transaction request", chargeBoxId, connectorId);
             return ResponseEntity.badRequest().build();
         }
     }
