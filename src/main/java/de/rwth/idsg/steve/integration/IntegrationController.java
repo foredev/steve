@@ -230,7 +230,6 @@ public class IntegrationController {
         return chargingProfileRepository.add(form);
     }
 
-    // Used by both ve-app-backend and enerhive to stop transactions
     @RequestMapping(value = "/chargepoints/{chargeBoxId}/{connectorId}/transaction", method = RequestMethod.DELETE)
     public ResponseEntity<Integer> stopActiveTransaction(@PathVariable String chargeBoxId, @PathVariable int connectorId) {
         if (chargeBoxId == null || chargeBoxId.isEmpty()) {
@@ -289,7 +288,6 @@ public class IntegrationController {
         return ResponseEntity.ok(transaction.getId());
     }
 
-    // Used by enerhive to start transactions again from th regulator
     @RequestMapping(value = "/chargepoints/{chargeBoxId}/transactions/{transactionId}", method = RequestMethod.PUT)
     public ResponseEntity<Boolean> resumeTransaction(@PathVariable String chargeBoxId, @PathVariable int transactionId) {
         if (chargeBoxId == null || chargeBoxId.isEmpty()) {
@@ -341,7 +339,6 @@ public class IntegrationController {
         return ResponseEntity.ok(true);
     }
 
-    // Used by ve-app-backend for scheduling
     @RequestMapping(value = "/chargepoints/{chargeBoxId}/{connectorId}/{tag}/transaction", method = RequestMethod.GET)
     public ResponseEntity<Boolean> startTransaction(@PathVariable String chargeBoxId, @PathVariable int connectorId, @PathVariable String tag) throws InterruptedException {
         List<ChargePointSelect> chargePointSelectList = new ArrayList<>();
