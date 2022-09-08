@@ -1,5 +1,6 @@
 package de.rwth.idsg.steve.integration;
 
+import de.rwth.idsg.steve.SteveException;
 import de.rwth.idsg.steve.integration.dto.ChargingLimitRequest;
 import de.rwth.idsg.steve.integration.dto.ChargingLimitResponse;
 import de.rwth.idsg.steve.integration.dto.ChargingProfileResponse;
@@ -33,7 +34,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
 import java.util.*;
 
@@ -230,13 +230,32 @@ public class IntegrationController {
         return chargingProfileRepository.add(form);
     }
 
+    // Used by both ve-app-backend and enerhive to stop transactions
     @RequestMapping(value = "/chargepoints/{chargeBoxId}/{connectorId}/transaction", method = RequestMethod.DELETE)
-    public ResponseEntity<Boolean> stopActiveTransaction(@PathVariable String chargeBoxId, @PathVariable int connectorId, HttpServletRequest request) {
+    public ResponseEntity<Integer> stopActiveTransaction(@PathVariable String chargeBoxId, @PathVariable int connectorId) {
+        if (chargeBoxId == null || chargeBoxId.isEmpty()) {
+            log.warn("[chargeBoxId={}, connectorId={}] chargeBoxId cannot be empty", chargeBoxId, connectorId);
+            return ResponseEntity.badRequest().build();
+        }
+
+        // What is a sensible upper limit here?
+        if (connectorId < 0 || connectorId > 5) {
+            log.warn("[chargeBoxId={}, connectorId={}] Invalid connector id", chargeBoxId, connectorId);
+            return ResponseEntity.badRequest().build();
+        }
+
+        boolean connected = chargePointHelperService.isConnected(chargeBoxId);
+
+        if (!connected) {
+            log.warn("[chargeBoxId={}] Charge box not connected", chargeBoxId);
+            return ResponseEntity.badRequest().build();
+        }
+
         List<Integer> activeTransactionIds = transactionRepository.getActiveTransactionIds(chargeBoxId);
 
         if (activeTransactionIds.isEmpty()) {
             log.warn("[chargeBoxId={}] No active transactions for charge box", chargeBoxId);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(true);
+            return ResponseEntity.badRequest().build();
         }
 
         List<Transaction> transactions = new ArrayList<>();
@@ -252,7 +271,7 @@ public class IntegrationController {
 
         if (optionalTransaction.isEmpty()) {
             log.warn("[chargeBoxId={}, connectorId={}] No transaction found", chargeBoxId, connectorId);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(true);
+            return ResponseEntity.badRequest().build();
         }
         Transaction transaction = optionalTransaction.get();
 
@@ -267,9 +286,62 @@ public class IntegrationController {
         int taskId = client16.remoteStopTransaction(params);
 
         log.info("[chargeBoxId={}, connectorId={}, transactionId={}, taskId={}] Remote stop transaction", chargeBoxId, connectorId, transaction.getId(), taskId);
+        return ResponseEntity.ok(transaction.getId());
+    }
+
+    // Used by enerhive to start transactions again from th regulator
+    @RequestMapping(value = "/chargepoints/{chargeBoxId}/transactions/{transactionId}", method = RequestMethod.PUT)
+    public ResponseEntity<Boolean> resumeTransaction(@PathVariable String chargeBoxId, @PathVariable int transactionId) {
+        if (chargeBoxId == null || chargeBoxId.isEmpty()) {
+            log.warn("[chargeBoxId={}] chargeBoxId cannot be empty", chargeBoxId);
+            return ResponseEntity.badRequest().build();
+        }
+
+        if (transactionId < 0) {
+            log.warn("[chargeBoxId={}, transactionId={}] Invalid transaction id", chargeBoxId, transactionId);
+            return ResponseEntity.badRequest().build();
+        }
+
+        boolean connected = chargePointHelperService.isConnected(chargeBoxId);
+
+        if (!connected) {
+            log.warn("[chargeBoxId={}] Charge box not connected", chargeBoxId);
+            return ResponseEntity.badRequest().build();
+        }
+
+        Transaction transaction;
+        try {
+            TransactionDetails transactionDetails = transactionRepository.getDetails(transactionId);
+            transaction = transactionDetails.getTransaction();
+        } catch (SteveException e) {
+            log.warn("[chargeBoxId={}, transactionId={}] Could not find transaction", chargeBoxId, transactionId);
+            return ResponseEntity.badRequest().build();
+        }
+
+        if (transaction.getStopTimestamp() == null) {
+            log.warn("[chargeBoxId={}, transactionId={}] Transaction already active", chargeBoxId, transactionId);
+            return ResponseEntity.badRequest().build();
+        }
+
+        int connectorId = transaction.getConnectorId();
+        String ocppIdTag = transaction.getOcppIdTag();
+
+        List<ChargePointSelect> chargePointSelectList = new ArrayList<>();
+        ChargePointSelect chargePointSelect = new ChargePointSelect(OcppTransport.JSON, chargeBoxId);
+        chargePointSelectList.add(chargePointSelect);
+
+        RemoteStartTransactionParams params = new RemoteStartTransactionParams();
+        params.setChargePointSelectList(chargePointSelectList);
+        params.setConnectorId(connectorId);
+        params.setIdTag(ocppIdTag);
+
+        int taskId = client16.remoteStartTransaction(params);
+
+        log.info("[chargeBoxId={}, connectorId={}, taskId={}] Remote start transaction", chargeBoxId, connectorId, taskId);
         return ResponseEntity.ok(true);
     }
 
+    // Used by ve-app-backend for scheduling
     @RequestMapping(value = "/chargepoints/{chargeBoxId}/{connectorId}/{tag}/transaction", method = RequestMethod.GET)
     public ResponseEntity<Boolean> startTransaction(@PathVariable String chargeBoxId, @PathVariable int connectorId, @PathVariable String tag) throws InterruptedException {
         List<ChargePointSelect> chargePointSelectList = new ArrayList<>();
