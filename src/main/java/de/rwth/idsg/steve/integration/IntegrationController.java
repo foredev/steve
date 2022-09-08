@@ -90,14 +90,14 @@ public class IntegrationController {
     public ResponseEntity<ChargingLimitResponse> setChargingLimit(@PathVariable String chargeBoxId, @PathVariable int connectorId, @RequestBody ChargingLimitRequest request) {
         boolean connected = chargePointHelperService.isConnected(chargeBoxId);
         if (!connected) {
-            log.warn("Charge box " + chargeBoxId + " is not connected");
+            log.warn("[chargeBoxId={}] Charge box is not connected", chargeBoxId);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ChargingLimitResponse(false, "Charge box " + chargeBoxId + " is not connected"));
         }
 
         List<Integer> activeTransactionIds = transactionRepository.getActiveTransactionIds(chargeBoxId);
         if (activeTransactionIds.isEmpty()) {
-            log.warn("No active transaction for chargeBoxId " + chargeBoxId);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ChargingLimitResponse(false, "No active transaction for chargeBoxId " + chargeBoxId));
+            log.warn("[chargeBoxId={}, connectorId={}] No active transaction for chargeBoxId on this connector",chargeBoxId, connectorId);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ChargingLimitResponse(false, "No active transaction for chargeBoxId " + chargeBoxId + " on connector " + connectorId));
         }
 
         int chargingProfileId = addChargingProfile(request);
@@ -162,7 +162,7 @@ public class IntegrationController {
     public ResponseEntity<ChargingProfileResponse> clearChargingProfile(@PathVariable String chargeBoxId, @PathVariable int connectorId, @PathVariable int chargingProfileId) {
         boolean connected = chargePointHelperService.isConnected(chargeBoxId);
         if (!connected) {
-            log.warn("Charge box " + chargeBoxId + " is not connected");
+            log.warn("[chargeBoxId={}] Charge box is not connected", chargeBoxId);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ChargingProfileResponse(false, "Charge box " +chargeBoxId + " is not connected"));
         }
         ChargingProfile.Details details = chargingProfileRepository.getDetails(chargingProfileId);
@@ -177,7 +177,7 @@ public class IntegrationController {
     public ResponseEntity<ChargingProfileResponse> setChargingProfile(@PathVariable String chargeBoxId, @PathVariable int connectorId, @PathVariable int chargingProfileId) {
         boolean connected = chargePointHelperService.isConnected(chargeBoxId);
         if (!connected) {
-            log.warn("Charge box " + chargeBoxId + " is not connected");
+            log.warn("[chargeBoxId={}] Charge box is not connected", chargeBoxId);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ChargingProfileResponse(false, "Charge box " + chargeBoxId + " is not connected"));
         }
         //Check if charging profile is in use for this chargebox ID
@@ -339,7 +339,7 @@ public class IntegrationController {
     public ResponseEntity<List<GetConfigurationTask.KeyValue>> getChargeBoxConfiguration(@PathVariable String chargeBoxId) throws InterruptedException {
         boolean connected = chargePointHelperService.isConnected(chargeBoxId);
         if (!connected) {
-            log.warn("Charge box " + chargeBoxId + " is not connected");
+            log.warn("[chargeBoxId={}] Chargebox is not connected", chargeBoxId);
             return ResponseEntity.badRequest().body(null);
         }
         GetConfigurationParams params = new GetConfigurationParams();
@@ -369,7 +369,7 @@ public class IntegrationController {
     public ResponseEntity<Boolean> triggerStatusUpdate(@PathVariable String chargeBoxId) {
         boolean connected = chargePointHelperService.isConnected(chargeBoxId);
         if (!connected) {
-            log.warn("Charge box " + chargeBoxId + " is not connected");
+            log.warn("[chargeBoxId={}] Chargebox is not connected", chargeBoxId);
             return ResponseEntity.badRequest().body(false);
         }
         List<ChargePointSelect> chargePointSelectList = new ArrayList<>();
@@ -381,7 +381,7 @@ public class IntegrationController {
         message.setChargePointSelectList(chargePointSelectList);
 
         client16.triggerMessage(message);
-        log.debug("trigger status message " + message.getTriggerMessage().value() + " to connector " +message.getConnectorId());
+        log.debug("[chargeBoxId={}] trigger status message " + message.getTriggerMessage().value() + " to connector " +message.getConnectorId(), chargeBoxId);
         return ResponseEntity.ok(true);
     }
 
@@ -389,7 +389,7 @@ public class IntegrationController {
     public ResponseEntity<Boolean> changeChargeBoxConfiguration(@PathVariable String chargeBoxId, @RequestBody List<ChangeConfigurationParams> configurations) throws InterruptedException {
         boolean connected = chargePointHelperService.isConnected(chargeBoxId);
         if(!connected) {
-            log.warn("Charge box" + chargeBoxId + " is not connected");
+            log.warn("[chargeBoxId={}] Chargebox is not connected", chargeBoxId);
             return  ResponseEntity.badRequest().body(false);
         }
         int taskId = 0;
