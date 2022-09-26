@@ -2,8 +2,11 @@ package de.rwth.idsg.steve.integration;
 
 import de.rwth.idsg.steve.integration.dto.ConnectorStatus;
 import de.rwth.idsg.steve.integration.dto.EnergyMeterData;
+import de.rwth.idsg.steve.repository.TransactionRepository;
+import de.rwth.idsg.steve.repository.dto.TransactionDetails;
 import ocpp.cs._2015._10.*;
 import org.jetbrains.annotations.NotNull;
+import org.joda.time.DateTime;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -13,9 +16,11 @@ import java.util.stream.Collectors;
 public class IntegrationServiceImpl implements IntegrationService {
 
     private final MqttService mqttService;
+    private final TransactionRepository transactionRepository;
 
-    public IntegrationServiceImpl(MqttService mqttService) {
+    public IntegrationServiceImpl(MqttService mqttService, TransactionRepository transactionRepository) {
         this.mqttService = mqttService;
+        this.transactionRepository = transactionRepository;
     }
 
     public void meterValues(String chargeBoxIdentity, MeterValuesRequest request) {
@@ -31,7 +36,7 @@ public class IntegrationServiceImpl implements IntegrationService {
             data.setVoltage(voltage);
             data.setCurrent(currentImport);
             List<Double> power = getPower(sampledValues);
-            if(power.isEmpty()) {
+            if (power.isEmpty()) {
                 data.setPower(getCalculatedPower(currentImport, voltage));
             } else {
                 data.setPower(power.stream().findFirst().get());
@@ -41,7 +46,7 @@ public class IntegrationServiceImpl implements IntegrationService {
             Optional<Double> energy = getEnergy(sampledValues);
             energy.ifPresent(data::setEnergy);
 
-            if(data.eligibleToSend()) {
+            if (data.eligibleToSend()) {
                 mqttService.publishEnergyMeterData(chargeBoxIdentity, Integer.toString(request.getConnectorId()), data);
             }
         }
@@ -120,5 +125,26 @@ public class IntegrationServiceImpl implements IntegrationService {
 
     public void chargingBoxStatus(String chargeBoxIdentity, int connectorIdentity, ConnectorStatus status) {
         mqttService.publishChargeBoxStatus(chargeBoxIdentity, Integer.toString(connectorIdentity), status);
+    }
+
+    @Override
+    public void onStopTransaction(String chargeBoxIdentity, int transactionId) {
+        TransactionDetails details = transactionRepository.getDetails(transactionId);
+        int connectorId = details.getTransaction().getConnectorId();
+
+        MeterValuesRequest request = new MeterValuesRequest();
+        request.setConnectorId(connectorId);
+
+        SampledValue sampledValue = new SampledValue();
+        sampledValue.setMeasurand(Measurand.POWER_ACTIVE_IMPORT);
+        sampledValue.setValue("0");
+
+        MeterValue meterValue = new MeterValue();
+        meterValue.withSampledValue(sampledValue);
+        meterValue.setTimestamp(DateTime.now());
+
+        request.withMeterValue(meterValue);
+
+        meterValues(chargeBoxIdentity, request);
     }
 }
