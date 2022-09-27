@@ -18,6 +18,7 @@
  */
 package de.rwth.idsg.steve.ocpp.ws.pipeline;
 
+import com.google.common.base.Strings;
 import de.rwth.idsg.steve.SteveException;
 import de.rwth.idsg.steve.ocpp.ws.WebSocketLogger;
 import de.rwth.idsg.steve.ocpp.ws.data.CommunicationContext;
@@ -41,11 +42,14 @@ public enum Sender implements Consumer<CommunicationContext> {
 
     @Override
     public void accept(CommunicationContext context) {
+        String incomingString = context.getIncomingString();
         String outgoingString = context.getOutgoingString();
         String chargeBoxId = context.getChargeBoxId();
         WebSocketSession session = context.getSession();
 
-        if (!context.getIncomingString().contains("Heartbeat")) {
+        if (Strings.isNullOrEmpty(incomingString)) {
+            WebSocketLogger.sending(chargeBoxId, session, outgoingString);
+        } else if (!context.getIncomingString().contains("Heartbeat")) {
             WebSocketLogger.sending(chargeBoxId, session, outgoingString);
         }
 
