@@ -45,7 +45,9 @@ public enum Sender implements Consumer<CommunicationContext> {
         String chargeBoxId = context.getChargeBoxId();
         WebSocketSession session = context.getSession();
 
-        WebSocketLogger.sending(chargeBoxId, session, outgoingString);
+        if (!context.getIncomingString().contains("Heartbeat")) {
+            WebSocketLogger.sending(chargeBoxId, session, outgoingString);
+        }
 
         TextMessage out = new TextMessage(outgoingString);
         try {

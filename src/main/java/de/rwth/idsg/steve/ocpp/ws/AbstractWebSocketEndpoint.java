@@ -107,7 +107,9 @@ public abstract class AbstractWebSocketEndpoint extends ConcurrentWebSocketHandl
             return;
         }
 
-        WebSocketLogger.receivedText(chargeBoxId, session, incomingString);
+        if (!incomingString.contains("Heartbeat")) {
+            WebSocketLogger.receivedText(chargeBoxId, session, incomingString);
+        }
 
         CommunicationContext context = new CommunicationContext(session, chargeBoxId);
         context.setIncomingString(incomingString);
