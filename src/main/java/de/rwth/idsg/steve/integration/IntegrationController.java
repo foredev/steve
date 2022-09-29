@@ -450,7 +450,7 @@ public class IntegrationController {
         message.setChargePointSelectList(chargePointSelectList);
 
         client16.triggerMessage(message);
-        log.debug("[chargeBoxId={}] trigger status message " + message.getTriggerMessage().value() + " to connector " +message.getConnectorId(), chargeBoxId);
+        log.info("[chargeBoxId={}] trigger status message " + message.getTriggerMessage().value() + " to connector " + message.getConnectorId(), chargeBoxId);
         return ResponseEntity.ok(true);
     }
 
