@@ -229,8 +229,6 @@ public class CentralSystemService16_Service {
 
         notificationService.ocppTransactionEnded(params);
 
-        integrationService.onStopTransaction(chargeBoxIdentity, transactionId);
-
         return new StopTransactionResponse().withIdTagInfo(idTagInfo);
     }
 
