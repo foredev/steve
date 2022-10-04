@@ -61,9 +61,9 @@ public class IntegrationServiceImpl implements IntegrationService {
                 .sorted(Comparator.comparing(SampledValue::getPhase))
                 .collect(Collectors.toList());
 
-        for(int i = 0; i<3; i++) {
-            for(SampledValue sample : sorted) {
-                if(sample.getPhase().value().contains(Integer.toString(i+1))) {
+        for (int i = 0; i < 3; i++) {
+            for (SampledValue sample : sorted) {
+                if (sample.getPhase().value().contains(Integer.toString(i + 1))) {
                     returnValues.set(i, Double.valueOf(sample.getValue()));
                 }
             }
@@ -80,9 +80,9 @@ public class IntegrationServiceImpl implements IntegrationService {
                 .sorted(Comparator.comparing(SampledValue::getPhase))
                 .collect(Collectors.toList());
 
-        for(int i = 0; i<3; i++) {
-            for(SampledValue sample : sorted) {
-                if(sample.getPhase().value().contains(Integer.toString(i+1))) {
+        for (int i = 0; i < 3; i++) {
+            for (SampledValue sample : sorted) {
+                if (sample.getPhase().value().contains(Integer.toString(i + 1))) {
                     returnValues.set(i, Double.valueOf(sample.getValue()));
                 }
             }
