@@ -128,23 +128,48 @@ public class IntegrationServiceImpl implements IntegrationService {
     }
 
     @Override
-    public void onStopTransaction(String chargeBoxIdentity, int transactionId) {
+    public void onStartTransaction(String chargeBoxIdentity, StartTransactionRequest startTransactionRequest) {
+        int connectorId = startTransactionRequest.getConnectorId();
+        int meterStart = startTransactionRequest.getMeterStart();
+        DateTime timestamp = startTransactionRequest.getTimestamp();
+
+        MeterValuesRequest request = createMeterValuesRequest(timestamp, connectorId, meterStart);
+        meterValues(chargeBoxIdentity, request);
+    }
+
+    @Override
+    public void onStopTransaction(String chargeBoxIdentity, StopTransactionRequest stopTransactionRequest) {
+        int transactionId = stopTransactionRequest.getTransactionId();
+        int meterStop = stopTransactionRequest.getMeterStop();
+        DateTime timestamp = stopTransactionRequest.getTimestamp();
+
         TransactionDetails details = transactionRepository.getDetails(transactionId);
         int connectorId = details.getTransaction().getConnectorId();
 
+        MeterValuesRequest request = createMeterValuesRequest(timestamp, connectorId, meterStop);
+        meterValues(chargeBoxIdentity, request);
+    }
+
+    private MeterValuesRequest createMeterValuesRequest(DateTime timestamp, int connectorId, int energyValue) {
         MeterValuesRequest request = new MeterValuesRequest();
         request.setConnectorId(connectorId);
 
-        SampledValue sampledValue = new SampledValue();
-        sampledValue.setMeasurand(Measurand.POWER_ACTIVE_IMPORT);
-        sampledValue.setValue("0");
+        SampledValue power = new SampledValue();
+        power.setMeasurand(Measurand.POWER_ACTIVE_IMPORT);
+        power.setValue("0");
+        power.setUnit(UnitOfMeasure.W);
+
+        SampledValue energy = new SampledValue();
+        energy.setMeasurand(Measurand.ENERGY_ACTIVE_IMPORT_REGISTER);
+        energy.setValue(Integer.toString(energyValue));
+        energy.setUnit(UnitOfMeasure.WH);
 
         MeterValue meterValue = new MeterValue();
-        meterValue.withSampledValue(sampledValue);
-        meterValue.setTimestamp(DateTime.now());
+        meterValue.withSampledValue(power, energy);
+        meterValue.setTimestamp(timestamp);
 
         request.withMeterValue(meterValue);
 
-        meterValues(chargeBoxIdentity, request);
+        return request;
     }
 }

@@ -196,6 +196,8 @@ public class CentralSystemService16_Service {
 
         notificationService.ocppTransactionStarted(transactionId, params);
 
+        integrationService.onStartTransaction(chargeBoxIdentity, parameters);
+
         return new StartTransactionResponse()
                 .withIdTagInfo(info)
                 .withTransactionId(transactionId);
@@ -228,6 +230,8 @@ public class CentralSystemService16_Service {
         ocppServerRepository.insertMeterValues(chargeBoxIdentity, parameters.getTransactionData(), transactionId);
 
         notificationService.ocppTransactionEnded(params);
+
+        integrationService.onStopTransaction(chargeBoxIdentity, parameters);
 
         return new StopTransactionResponse().withIdTagInfo(idTagInfo);
     }

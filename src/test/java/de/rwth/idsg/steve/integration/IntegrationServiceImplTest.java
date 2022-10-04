@@ -12,6 +12,9 @@ import de.rwth.idsg.steve.repository.dto.Transaction;
 import de.rwth.idsg.steve.repository.dto.TransactionDetails;
 import de.rwth.idsg.steve.web.dto.TransactionQueryForm;
 import ocpp.cs._2015._10.MeterValuesRequest;
+import ocpp.cs._2015._10.StartTransactionRequest;
+import ocpp.cs._2015._10.StopTransactionRequest;
+import org.joda.time.DateTime;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,10 +28,12 @@ public class IntegrationServiceImplTest {
     private IntegrationServiceImpl integrationService;
     private TestMqttService mqttService;
 
+    private TestTransactionRepository transactionRepository;
+
     @BeforeEach
     public void init() {
         mqttService = new TestMqttService();
-        TransactionRepository transactionRepository = new TestTransactionRepository();
+        transactionRepository = new TestTransactionRepository();
 
         integrationService = new IntegrationServiceImpl(mqttService, transactionRepository);
     }
@@ -75,6 +80,81 @@ public class IntegrationServiceImplTest {
         Assertions.assertEquals(14.20199966430664, data3.getCurrent().get(0));
         Assertions.assertEquals(0, data3.getCurrent().get(1));
         Assertions.assertEquals(0, data3.getCurrent().get(2));
+    }
+
+    @Test
+    public void onStartTransaction_meterStartZero_expectEnergyZero() {
+        StartTransactionRequest startTransactionRequest = new StartTransactionRequest();
+        startTransactionRequest.setConnectorId(1);
+        startTransactionRequest.setMeterStart(0);
+
+        DateTime timestamp = new DateTime(2022, 10, 4, 14, 24, 30);
+        startTransactionRequest.setTimestamp(timestamp);
+
+        integrationService.onStartTransaction("charge-box-1", startTransactionRequest);
+
+        List<TestMqttService.EnergyMeterCall> energyMeterCalls = mqttService.energyMeterCalls;
+
+        Assertions.assertEquals(1, energyMeterCalls.size());
+
+        TestMqttService.EnergyMeterCall energyMeterCall = energyMeterCalls.get(0);
+
+        Assertions.assertEquals("charge-box-1", energyMeterCall.chargeBoxId);
+        Assertions.assertEquals("1", energyMeterCall.connector);
+        Assertions.assertEquals(0, energyMeterCall.data.getEnergy());
+        Assertions.assertEquals(0, energyMeterCall.data.getPower());
+        Assertions.assertEquals(timestamp.toDate(), energyMeterCall.data.getTimestamp());
+    }
+
+    @Test
+    public void onStartTransaction_meterStartNonZero_expectEnergyNonZero() {
+        StartTransactionRequest startTransactionRequest = new StartTransactionRequest();
+        startTransactionRequest.setConnectorId(1);
+        startTransactionRequest.setMeterStart(124904);
+
+        DateTime timestamp = new DateTime(2022, 10, 4, 14, 25, 30);
+        startTransactionRequest.setTimestamp(timestamp);
+
+        integrationService.onStartTransaction("charge-box-2", startTransactionRequest);
+
+        List<TestMqttService.EnergyMeterCall> energyMeterCalls = mqttService.energyMeterCalls;
+
+        Assertions.assertEquals(1, energyMeterCalls.size());
+
+        TestMqttService.EnergyMeterCall energyMeterCall = energyMeterCalls.get(0);
+
+        Assertions.assertEquals("charge-box-2", energyMeterCall.chargeBoxId);
+        Assertions.assertEquals("1", energyMeterCall.connector);
+        Assertions.assertEquals(124904, energyMeterCall.data.getEnergy());
+        Assertions.assertEquals(0, energyMeterCall.data.getPower());
+        Assertions.assertEquals(timestamp.toDate(), energyMeterCall.data.getTimestamp());
+    }
+
+    @Test
+    public void onStopTransaction() {
+        Transaction transaction = Transaction.builder().id(111).connectorId(1).build();
+        transactionRepository.transactionDetails = new TransactionDetails(transaction, new ArrayList<>(), null);
+
+        StopTransactionRequest stopTransactionRequest = new StopTransactionRequest();
+        stopTransactionRequest.setTransactionId(111);
+        stopTransactionRequest.setMeterStop(128971);
+
+        DateTime timestamp = new DateTime(2022, 10, 4, 14, 26, 30);
+        stopTransactionRequest.setTimestamp(timestamp);
+
+        integrationService.onStopTransaction("charge-box-3", stopTransactionRequest);
+
+        List<TestMqttService.EnergyMeterCall> energyMeterCalls = mqttService.energyMeterCalls;
+
+        Assertions.assertEquals(1, energyMeterCalls.size());
+
+        TestMqttService.EnergyMeterCall energyMeterCall = energyMeterCalls.get(0);
+
+        Assertions.assertEquals("charge-box-3", energyMeterCall.chargeBoxId);
+        Assertions.assertEquals("1", energyMeterCall.connector);
+        Assertions.assertEquals(128971, energyMeterCall.data.getEnergy());
+        Assertions.assertEquals(0, energyMeterCall.data.getPower());
+        Assertions.assertEquals(timestamp.toDate(), energyMeterCall.data.getTimestamp());
     }
 
     private final String easeeJsonString = "{\n" +
@@ -160,6 +240,8 @@ public class IntegrationServiceImplTest {
 
     private static class TestTransactionRepository implements TransactionRepository {
 
+        public TransactionDetails transactionDetails = null;
+
         @Override
         public List<Transaction> getTransactions(TransactionQueryForm form) {
             return null;
@@ -177,7 +259,7 @@ public class IntegrationServiceImplTest {
 
         @Override
         public TransactionDetails getDetails(int transactionPk, boolean firstArrivingMeterValueIfMultiple) {
-            return null;
+            return transactionDetails;
         }
     }
 }
