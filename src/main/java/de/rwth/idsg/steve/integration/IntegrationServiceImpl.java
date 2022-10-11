@@ -61,6 +61,14 @@ public class IntegrationServiceImpl implements IntegrationService {
                 .sorted(Comparator.comparing(SampledValue::getPhase))
                 .collect(Collectors.toList());
 
+        // Kempower fix, they don't send a phase value at all so we just put it on phase 1
+        if (sorted.size() == 1) {
+            SampledValue sampledValue = sorted.get(0);
+            if (sampledValue.getPhase() == null) {
+                sampledValue.setPhase(Phase.L_1);
+            }
+        }
+
         for (int i = 0; i < 3; i++) {
             for (SampledValue sample : sorted) {
                 if (sample.getPhase().value().contains(Integer.toString(i + 1))) {
@@ -79,6 +87,14 @@ public class IntegrationServiceImpl implements IntegrationService {
                 .filter(sampledValue -> sampledValue.getUnit() == UnitOfMeasure.V)
                 .sorted(Comparator.comparing(SampledValue::getPhase))
                 .collect(Collectors.toList());
+
+        // Kempower fix, they don't send a phase value at all so we just put it on phase 1
+        if (sorted.size() == 1) {
+            SampledValue sampledValue = sorted.get(0);
+            if (sampledValue.getPhase() == null) {
+                sampledValue.setPhase(Phase.L_1);
+            }
+        }
 
         for (int i = 0; i < 3; i++) {
             for (SampledValue sample : sorted) {

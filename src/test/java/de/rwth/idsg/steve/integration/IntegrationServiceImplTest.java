@@ -83,6 +83,38 @@ public class IntegrationServiceImplTest {
     }
 
     @Test
+    public void kempower_meterValues_to_mqtt() throws JsonProcessingException {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JodaModule());
+
+        JsonObjectMapper objectMapper = JsonObjectMapper.INSTANCE;
+
+        MeterValuesRequest mvr = objectMapper.getMapper().readValue(kemPowerJsonString, MeterValuesRequest.class);
+
+        integrationService.meterValues("charge-box-1", mvr);
+
+        List<TestMqttService.EnergyMeterCall> energyMeterCalls = mqttService.energyMeterCalls;
+        Assertions.assertEquals(1, energyMeterCalls.size());
+
+        TestMqttService.EnergyMeterCall energyMeterCall = energyMeterCalls.get(0);
+        EnergyMeterData data = energyMeterCall.data;
+
+        Assertions.assertEquals("charge-box-1", energyMeterCall.chargeBoxId);
+        Assertions.assertEquals("1", energyMeterCall.connector);
+
+        Assertions.assertEquals(53, data.getCurrent().get(0));
+        Assertions.assertEquals(0, data.getCurrent().get(1));
+        Assertions.assertEquals(0, data.getCurrent().get(2));
+
+        Assertions.assertEquals(448, data.getVoltage().get(0));
+        Assertions.assertEquals(0, data.getVoltage().get(1));
+        Assertions.assertEquals(0, data.getVoltage().get(2));
+
+        Assertions.assertEquals(23744, data.getPower());
+        Assertions.assertEquals(1139, data.getEnergy());
+    }
+
+    @Test
     public void onStartTransaction_meterStartZero_expectEnergyZero() {
         StartTransactionRequest startTransactionRequest = new StartTransactionRequest();
         startTransactionRequest.setConnectorId(1);
@@ -204,6 +236,66 @@ public class IntegrationServiceImplTest {
             "      ]\n" +
             "    }\n" +
             "  ]\n" +
+            "}\n";
+
+    private final String kemPowerJsonString = "{\n" +
+            "  \"connectorId\": 1,\n" +
+            "  \"meterValue\": [\n" +
+            "    {\n" +
+            "      \"timestamp\": \"2022-09-29T09:13:34.604Z\",\n" +
+            "      \"sampledValue\": [\n" +
+            "        {\n" +
+            "          \"location\": \"EV\",\n" +
+            "          \"format\": \"Raw\",\n" +
+            "          \"context\": \"Sample.Periodic\",\n" +
+            "          \"measurand\": \"SoC\",\n" +
+            "          \"unit\": \"Percent\",\n" +
+            "          \"value\": \"45\"\n" +
+            "        },\n" +
+            "        {\n" +
+            "          \"location\": \"Body\",\n" +
+            "          \"format\": \"Raw\",\n" +
+            "          \"context\": \"Sample.Periodic\",\n" +
+            "          \"measurand\": \"Temperature\",\n" +
+            "          \"unit\": \"Celsius\",\n" +
+            "          \"value\": \"37\"\n" +
+            "        },\n" +
+            "        {\n" +
+            "          \"location\": \"Outlet\",\n" +
+            "          \"format\": \"Raw\",\n" +
+            "          \"context\": \"Sample.Periodic\",\n" +
+            "          \"measurand\": \"Current.Import\",\n" +
+            "          \"unit\": \"A\",\n" +
+            "          \"value\": \"53\"\n" +
+            "        },\n" +
+            "        {\n" +
+            "          \"location\": \"Outlet\",\n" +
+            "          \"format\": \"Raw\",\n" +
+            "          \"context\": \"Sample.Periodic\",\n" +
+            "          \"measurand\": \"Voltage\",\n" +
+            "          \"unit\": \"V\",\n" +
+            "          \"value\": \"448\"\n" +
+            "        },\n" +
+            "        {\n" +
+            "          \"location\": \"Outlet\",\n" +
+            "          \"format\": \"Raw\",\n" +
+            "          \"context\": \"Sample.Periodic\",\n" +
+            "          \"measurand\": \"Power.Active.Import\",\n" +
+            "          \"unit\": \"W\",\n" +
+            "          \"value\": \"23744\"\n" +
+            "        },\n" +
+            "        {\n" +
+            "          \"location\": \"Outlet\",\n" +
+            "          \"format\": \"Raw\",\n" +
+            "          \"context\": \"Sample.Periodic\",\n" +
+            "          \"measurand\": \"Energy.Active.Import.Register\",\n" +
+            "          \"unit\": \"Wh\",\n" +
+            "          \"value\": \"1139\"\n" +
+            "        }\n" +
+            "      ]\n" +
+            "    }\n" +
+            "  ],\n" +
+            "  \"transactionId\": 5227\n" +
             "}\n";
 
     private static class TestMqttService implements MqttService {
