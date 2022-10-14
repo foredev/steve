@@ -259,7 +259,7 @@ public class IntegrationController {
 
         List<Transaction> transactions = new ArrayList<>();
         for (Integer activeTransactionId : activeTransactionIds) {
-            TransactionDetails details = transactionRepository.getDetails(activeTransactionId);
+            TransactionDetails details = transactionRepository.getDetailsWithoutMeterValues(activeTransactionId);
             transactions.add(details.getTransaction());
         }
 
@@ -309,7 +309,7 @@ public class IntegrationController {
 
         Transaction transaction;
         try {
-            TransactionDetails transactionDetails = transactionRepository.getDetails(transactionId);
+            TransactionDetails transactionDetails = transactionRepository.getDetailsWithoutMeterValues(transactionId);
             transaction = transactionDetails.getTransaction();
         } catch (SteveException e) {
             log.warn("[chargeBoxId={}, transactionId={}] Could not find transaction", chargeBoxId, transactionId);
@@ -354,7 +354,7 @@ public class IntegrationController {
 
         if (!activeTransactions.isEmpty()) {
             for (Integer transaction : activeTransactions) {
-                if (transactionRepository.getDetails(transaction).getTransaction().getConnectorId() == connectorId) {
+                if (transactionRepository.getDetailsWithoutMeterValues(transaction).getTransaction().getConnectorId() == connectorId) {
                     log.warn("[chargeBoxId={}, connectorId={}, transactionId={}] Transaction already active", chargeBoxId, connectorId, transaction);
                     return ResponseEntity.badRequest().body(false);
                 }

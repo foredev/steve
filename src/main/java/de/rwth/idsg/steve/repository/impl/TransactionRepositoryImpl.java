@@ -41,6 +41,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import java.io.Writer;
+import java.util.ArrayList;
 import java.util.List;
 
 import static de.rwth.idsg.steve.utils.CustomDSL.date;
@@ -224,6 +225,60 @@ public class TransactionRepositoryImpl implements TransactionRepository {
                                                            .build());
 
         return new TransactionDetails(new TransactionMapper().map(transaction), values, nextTx);
+    }
+
+    @Override
+    public TransactionDetails getDetailsWithoutMeterValues(int transactionPk, boolean firstArrivingMeterValueIfMultiple) {
+
+        // -------------------------------------------------------------------------
+        // Step 1: Collect general data about transaction
+        // -------------------------------------------------------------------------
+
+        TransactionQueryForm form = new TransactionQueryForm();
+        form.setTransactionPk(transactionPk);
+        form.setType(TransactionQueryForm.QueryType.ALL);
+        form.setPeriodType(TransactionQueryForm.QueryPeriodType.ALL);
+
+        Record12<Integer, String, Integer, String, DateTime, String, DateTime, String, String, Integer, Integer, TransactionStopEventActor>
+                transaction = getInternal(form).fetchOne();
+
+        if (transaction == null) {
+            throw new SteveException("There is no transaction with id '%s'", transactionPk);
+        }
+
+        DateTime startTimestamp = transaction.value5();
+        DateTime stopTimestamp = transaction.value7();
+        String stopValue = transaction.value8();
+        String chargeBoxId = transaction.value2();
+        int connectorId = transaction.value3();
+
+        // -------------------------------------------------------------------------
+        // Step 2: Get next transaction
+        // -------------------------------------------------------------------------
+
+        TransactionStartRecord nextTx = null;
+
+        if (stopTimestamp == null && stopValue == null) {
+
+            // https://github.com/RWTH-i5-IDSG/steve/issues/97
+            //
+            // handle "zombie" transaction, for which we did not receive any StopTransaction. if we do not handle it,
+            // meter values for all subsequent transactions at this chargebox and connector will be falsely attributed
+            // to this zombie transaction.
+            //
+            // "what is the subsequent transaction at the same chargebox and connector?"
+            nextTx = ctx.selectFrom(TRANSACTION_START)
+                    .where(TRANSACTION_START.CONNECTOR_PK.eq(ctx.select(CONNECTOR.CONNECTOR_PK)
+                            .from(CONNECTOR)
+                            .where(CONNECTOR.CHARGE_BOX_ID.equal(chargeBoxId))
+                            .and(CONNECTOR.CONNECTOR_ID.equal(connectorId))))
+                    .and(TRANSACTION_START.START_TIMESTAMP.greaterThan(startTimestamp))
+                    .orderBy(TRANSACTION_START.START_TIMESTAMP)
+                    .limit(1)
+                    .fetchOne();
+        }
+
+        return new TransactionDetails(new TransactionMapper().map(transaction), new ArrayList<>(), nextTx);
     }
 
     // -------------------------------------------------------------------------

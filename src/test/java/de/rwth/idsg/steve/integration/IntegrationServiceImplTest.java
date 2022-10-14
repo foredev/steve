@@ -353,5 +353,10 @@ public class IntegrationServiceImplTest {
         public TransactionDetails getDetails(int transactionPk, boolean firstArrivingMeterValueIfMultiple) {
             return transactionDetails;
         }
+
+        @Override
+        public TransactionDetails getDetailsWithoutMeterValues(int transactionPk, boolean firstArrivingMeterValueIfMultiple) {
+            return null;
+        }
     }
 }
