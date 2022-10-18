@@ -131,6 +131,18 @@ public class IntegrationServiceImpl implements IntegrationService {
     }
 
     public Optional<Double> getEnergy(List<SampledValue> sampledValues) {
+        Optional<Double> optionalEnergyInKwh = sampledValues
+                .stream()
+                .filter(sampledValue -> sampledValue.getMeasurand() == Measurand.ENERGY_ACTIVE_IMPORT_REGISTER)
+                .filter(sampledValue -> sampledValue.getUnit() == UnitOfMeasure.K_WH)
+                .findFirst()
+                .map(sampledValue -> Double.valueOf(sampledValue.getValue()));
+
+        if (optionalEnergyInKwh.isPresent()) {
+            Double energyInKwh = optionalEnergyInKwh.get();
+            return Optional.of(energyInKwh * 1000);
+        }
+
         return sampledValues
                 .stream()
                 .filter(sampledValue -> sampledValue.getMeasurand() == Measurand.ENERGY_ACTIVE_IMPORT_REGISTER)

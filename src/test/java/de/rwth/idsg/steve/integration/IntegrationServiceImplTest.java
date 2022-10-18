@@ -11,9 +11,7 @@ import de.rwth.idsg.steve.repository.TransactionRepository;
 import de.rwth.idsg.steve.repository.dto.Transaction;
 import de.rwth.idsg.steve.repository.dto.TransactionDetails;
 import de.rwth.idsg.steve.web.dto.TransactionQueryForm;
-import ocpp.cs._2015._10.MeterValuesRequest;
-import ocpp.cs._2015._10.StartTransactionRequest;
-import ocpp.cs._2015._10.StopTransactionRequest;
+import ocpp.cs._2015._10.*;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class IntegrationServiceImplTest {
 
@@ -189,6 +188,50 @@ public class IntegrationServiceImplTest {
         Assertions.assertEquals(timestamp.toDate(), energyMeterCall.data.getTimestamp());
     }
 
+    @Test
+    public void getEnergy_inKwh() throws JsonProcessingException {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JodaModule());
+
+        JsonObjectMapper objectMapper = JsonObjectMapper.INSTANCE;
+
+        MeterValuesRequest mvr = objectMapper.getMapper().readValue(zaptecJsonString, MeterValuesRequest.class);
+
+        List<MeterValue> meterValues = mvr.getMeterValue();
+        MeterValue meterValue = meterValues.get(1); // the energy meter value
+
+        List<SampledValue> sampledValues = meterValue.getSampledValue();
+
+        Optional<Double> optionalEnergy = integrationService.getEnergy(sampledValues);
+
+        Assertions.assertTrue(optionalEnergy.isPresent());
+
+        Double energy = optionalEnergy.get();
+        Assertions.assertEquals(4300, energy);
+    }
+
+    @Test
+    public void getEnergy_inWh() throws JsonProcessingException {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JodaModule());
+
+        JsonObjectMapper objectMapper = JsonObjectMapper.INSTANCE;
+
+        MeterValuesRequest mvr = objectMapper.getMapper().readValue(kemPowerJsonString, MeterValuesRequest.class);
+
+        List<MeterValue> meterValues = mvr.getMeterValue();
+        MeterValue meterValue = meterValues.get(0);
+
+        List<SampledValue> sampledValues = meterValue.getSampledValue();
+
+        Optional<Double> optionalEnergy = integrationService.getEnergy(sampledValues);
+
+        Assertions.assertTrue(optionalEnergy.isPresent());
+
+        Double energy = optionalEnergy.get();
+        Assertions.assertEquals(1139, energy);
+    }
+
     private final String easeeJsonString = "{\n" +
             "  \"connectorId\": 1,\n" +
             "  \"transactionId\": 5226,\n" +
@@ -296,6 +339,82 @@ public class IntegrationServiceImplTest {
             "    }\n" +
             "  ],\n" +
             "  \"transactionId\": 5227\n" +
+            "}\n";
+
+    private final String zaptecJsonString = "{\n" +
+            "  \"connectorId\": 1,\n" +
+            "  \"transactionId\": 6773,\n" +
+            "  \"meterValue\": [\n" +
+            "    {\n" +
+            "      \"timestamp\": \"2022-10-18T11:14:09.703Z\",\n" +
+            "      \"sampledValue\": [\n" +
+            "        {\n" +
+            "          \"value\": \"3593\",\n" +
+            "          \"context\": \"Sample.Periodic\",\n" +
+            "          \"measurand\": \"Power.Active.Import\",\n" +
+            "          \"unit\": \"W\"\n" +
+            "        }\n" +
+            "      ]\n" +
+            "    },\n" +
+            "    {\n" +
+            "      \"timestamp\": \"2022-10-13T14:42:55.04Z\",\n" +
+            "      \"sampledValue\": [\n" +
+            "        {\n" +
+            "          \"value\": \"4.3\",\n" +
+            "          \"context\": \"Sample.Periodic\",\n" +
+            "          \"measurand\": \"Energy.Active.Import.Register\",\n" +
+            "          \"unit\": \"kWh\"\n" +
+            "        }\n" +
+            "      ]\n" +
+            "    },\n" +
+            "    {\n" +
+            "      \"timestamp\": \"2022-10-18T11:13:57.33Z\",\n" +
+            "      \"sampledValue\": [\n" +
+            "        {\n" +
+            "          \"value\": \"11040\",\n" +
+            "          \"context\": \"Sample.Periodic\",\n" +
+            "          \"measurand\": \"Power.Offered\",\n" +
+            "          \"unit\": \"W\"\n" +
+            "        }\n" +
+            "      ]\n" +
+            "    },\n" +
+            "    {\n" +
+            "      \"timestamp\": \"2022-10-18T11:14:09.703Z\",\n" +
+            "      \"sampledValue\": [\n" +
+            "        {\n" +
+            "          \"value\": \"15.823\",\n" +
+            "          \"context\": \"Sample.Periodic\",\n" +
+            "          \"measurand\": \"Current.Import\",\n" +
+            "          \"phase\": \"L1-N\",\n" +
+            "          \"unit\": \"A\"\n" +
+            "        }\n" +
+            "      ]\n" +
+            "    },\n" +
+            "    {\n" +
+            "      \"timestamp\": \"2022-10-18T11:14:09.703Z\",\n" +
+            "      \"sampledValue\": [\n" +
+            "        {\n" +
+            "          \"value\": \"0.024\",\n" +
+            "          \"context\": \"Sample.Periodic\",\n" +
+            "          \"measurand\": \"Current.Import\",\n" +
+            "          \"phase\": \"L2-N\",\n" +
+            "          \"unit\": \"A\"\n" +
+            "        }\n" +
+            "      ]\n" +
+            "    },\n" +
+            "    {\n" +
+            "      \"timestamp\": \"2022-10-18T11:14:09.707Z\",\n" +
+            "      \"sampledValue\": [\n" +
+            "        {\n" +
+            "          \"value\": \"0.025\",\n" +
+            "          \"context\": \"Sample.Periodic\",\n" +
+            "          \"measurand\": \"Current.Import\",\n" +
+            "          \"phase\": \"L3-N\",\n" +
+            "          \"unit\": \"A\"\n" +
+            "        }\n" +
+            "      ]\n" +
+            "    }\n" +
+            "  ]\n" +
             "}\n";
 
     private static class TestMqttService implements MqttService {
