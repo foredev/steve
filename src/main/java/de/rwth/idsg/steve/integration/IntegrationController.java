@@ -352,24 +352,16 @@ public class IntegrationController {
 
         List<Integer> activeTransactions = transactionRepository.getActiveTransactionIdsWithoutView(chargeBoxId);
 
-        chargePointSelectList.add(chargePointSelect);
         if (!activeTransactions.isEmpty()) {
             for (Integer transaction : activeTransactions) {
                 if (transactionRepository.getDetailsWithoutMeterValues(transaction).getTransaction().getConnectorId() == connectorId) {
-
-                    Transaction stopTransaction = transactionRepository.getDetailsWithoutMeterValues(transaction).getTransaction();
-                    RemoteStopTransactionParams params = new RemoteStopTransactionParams();
-                    params.setTransactionId(stopTransaction.getId());
-                    params.setChargePointSelectList(chargePointSelectList);
-
-                    int taskId = client16.remoteStopTransaction(params);
-
-                    log.warn("[chargeBoxId={}, connectorId={}, transactionId={}] Transaction already active, trying to stop", chargeBoxId, connectorId, transaction);
-                    //return ResponseEntity.badRequest().body(false);
+                    log.warn("[chargeBoxId={}, connectorId={}, transactionId={}] Transaction already active", chargeBoxId, connectorId, transaction);
+                    return ResponseEntity.badRequest().body(false);
                 }
             }
         }
 
+        chargePointSelectList.add(chargePointSelect);
         RemoteStartTransactionParams params = new RemoteStartTransactionParams();
         params.setChargePointSelectList(chargePointSelectList);
         params.setConnectorId(connectorId);
