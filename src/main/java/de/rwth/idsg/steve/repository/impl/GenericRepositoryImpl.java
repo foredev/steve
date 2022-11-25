@@ -25,16 +25,12 @@ import de.rwth.idsg.steve.utils.DateTimeUtils;
 import de.rwth.idsg.steve.web.dto.Statistics;
 import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
-import org.jooq.DSLContext;
-import org.jooq.Field;
-import org.jooq.Record2;
-import org.jooq.Record8;
+import org.jooq.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import static de.rwth.idsg.steve.utils.CustomDSL.date;
 import static jooq.steve.db.Tables.RESERVATION;
-import static jooq.steve.db.Tables.TRANSACTION;
 import static jooq.steve.db.tables.ChargeBox.CHARGE_BOX;
 import static jooq.steve.db.tables.OcppTag.OCPP_TAG;
 import static jooq.steve.db.tables.SchemaVersion.SCHEMA_VERSION;
@@ -79,11 +75,11 @@ public class GenericRepositoryImpl implements GenericRepository {
                    .and(RESERVATION.STATUS.eq(ReservationStatus.ACCEPTED.name()))
                    .asField("num_reservations");
 
-        Field<Integer> numTransactions =
+        /*Field<Integer> numTransactions =
                 ctx.selectCount()
                    .from(TRANSACTION)
                    .where(TRANSACTION.STOP_TIMESTAMP.isNull())
-                   .asField("num_transactions");
+                   .asField("num_transactions");*/
 
         Field<Integer> heartbeatsToday =
                 ctx.selectCount()
@@ -103,13 +99,12 @@ public class GenericRepositoryImpl implements GenericRepository {
                    .where(date(CHARGE_BOX.LAST_HEARTBEAT_TIMESTAMP).lessThan(date(yesterdaysNow)))
                    .asField("heartbeats_earlier");
 
-        Record8<Integer, Integer, Integer, Integer, Integer, Integer, Integer, Integer> gs =
+        Record7<Integer, Integer, Integer, Integer, Integer, Integer, Integer> gs =
                 ctx.select(
                         numChargeBoxes,
                         numOcppTags,
                         numUsers,
                         numReservations,
-                        numTransactions,
                         heartbeatsToday,
                         heartbeatsYesterday,
                         heartbeatsEarlier
@@ -120,10 +115,10 @@ public class GenericRepositoryImpl implements GenericRepository {
                          .numOcppTags(gs.value2())
                          .numUsers(gs.value3())
                          .numReservations(gs.value4())
-                         .numTransactions(gs.value5())
-                         .heartbeatToday(gs.value6())
-                         .heartbeatYesterday(gs.value7())
-                         .heartbeatEarlier(gs.value8())
+                         .numTransactions(0)
+                         .heartbeatToday(gs.value5())
+                         .heartbeatYesterday(gs.value6())
+                         .heartbeatEarlier(gs.value7())
                          .build();
     }
 
