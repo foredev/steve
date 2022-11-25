@@ -299,6 +299,23 @@ public class TransactionRepositoryImpl implements TransactionRepository {
         return new TransactionDetails(new TransactionMapper().map(transaction), new ArrayList<>(), nextTx);
     }
 
+    @Override
+    public Integer getTransactionConnectorId(int transactionPk) {
+        Record1<Integer> record = ctx.select(CONNECTOR.CONNECTOR_ID)
+                .from(CONNECTOR)
+                .join(TRANSACTION_START)
+                .on(CONNECTOR.CONNECTOR_PK.equal(TRANSACTION_START.CONNECTOR_PK))
+                .where(TRANSACTION_START.TRANSACTION_PK.equal(transactionPk))
+                .limit(1)
+                .fetchOne();
+
+        if (record == null) {
+            return -1;
+        }
+
+        return record.value1();
+    }
+
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------

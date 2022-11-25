@@ -3,7 +3,7 @@ package de.rwth.idsg.steve.integration;
 import de.rwth.idsg.steve.integration.dto.ConnectorStatus;
 import de.rwth.idsg.steve.integration.dto.EnergyMeterData;
 import de.rwth.idsg.steve.repository.TransactionRepository;
-import de.rwth.idsg.steve.repository.dto.TransactionDetails;
+import lombok.extern.slf4j.Slf4j;
 import ocpp.cs._2015._10.*;
 import org.jetbrains.annotations.NotNull;
 import org.joda.time.DateTime;
@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class IntegrationServiceImpl implements IntegrationService {
 
@@ -171,8 +172,11 @@ public class IntegrationServiceImpl implements IntegrationService {
         int meterStop = stopTransactionRequest.getMeterStop();
         DateTime timestamp = stopTransactionRequest.getTimestamp();
 
-        TransactionDetails details = transactionRepository.getDetailsWithoutMeterValues(transactionId);
-        int connectorId = details.getTransaction().getConnectorId();
+        Integer connectorId = transactionRepository.getTransactionConnectorId(transactionId);
+        if (connectorId == -1) {
+            log.info("[chargeBoxId={}, transactionId={}] Failed to get connector id for transaction", chargeBoxIdentity, transactionId);
+            return;
+        }
 
         MeterValuesRequest request = createMeterValuesRequest(timestamp, connectorId, meterStop);
         meterValues(chargeBoxIdentity, request);

@@ -482,5 +482,10 @@ public class IntegrationServiceImplTest {
         public TransactionDetails getDetailsWithoutMeterValues(int transactionPk, boolean firstArrivingMeterValueIfMultiple) {
             return null;
         }
+
+        @Override
+        public Integer getTransactionConnectorId(int transactionPk) {
+            return null;
+        }
     }
 }

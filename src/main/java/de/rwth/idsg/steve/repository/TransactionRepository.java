@@ -42,6 +42,8 @@ public interface TransactionRepository {
 
     TransactionDetails getDetailsWithoutMeterValues(int transactionPk, boolean firstArrivingMeterValueIfMultiple);
 
+    Integer getTransactionConnectorId(int transactionPk);
+
     default TransactionDetails getDetails(int transactionPk) {
         return getDetails(transactionPk, true);
     }
