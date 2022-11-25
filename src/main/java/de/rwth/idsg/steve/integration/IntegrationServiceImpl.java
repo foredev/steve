@@ -171,7 +171,7 @@ public class IntegrationServiceImpl implements IntegrationService {
         int meterStop = stopTransactionRequest.getMeterStop();
         DateTime timestamp = stopTransactionRequest.getTimestamp();
 
-        TransactionDetails details = transactionRepository.getDetails(transactionId);
+        TransactionDetails details = transactionRepository.getDetailsWithoutMeterValues(transactionId);
         int connectorId = details.getTransaction().getConnectorId();
 
         MeterValuesRequest request = createMeterValuesRequest(timestamp, connectorId, meterStop);
