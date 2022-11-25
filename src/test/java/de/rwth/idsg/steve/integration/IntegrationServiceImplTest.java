@@ -469,6 +469,11 @@ public class IntegrationServiceImplTest {
         }
 
         @Override
+        public List<Integer> getActiveTransactionIdsWithoutView(String chargeBoxId) {
+            return null;
+        }
+
+        @Override
         public TransactionDetails getDetails(int transactionPk, boolean firstArrivingMeterValueIfMultiple) {
             return transactionDetails;
         }
