@@ -28,14 +28,7 @@ import jooq.steve.db.enums.TransactionStopEventActor;
 import jooq.steve.db.tables.records.ConnectorMeterValueRecord;
 import jooq.steve.db.tables.records.TransactionStartRecord;
 import org.joda.time.DateTime;
-import org.jooq.Condition;
-import org.jooq.DSLContext;
-import org.jooq.Field;
-import org.jooq.Record12;
-import org.jooq.Record9;
-import org.jooq.RecordMapper;
-import org.jooq.SelectQuery;
-import org.jooq.Table;
+import org.jooq.*;
 import org.jooq.impl.DSL;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
@@ -45,6 +38,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static de.rwth.idsg.steve.utils.CustomDSL.date;
+import static jooq.steve.db.Tables.TRANSACTION_STOP;
 import static jooq.steve.db.tables.ChargeBox.CHARGE_BOX;
 import static jooq.steve.db.tables.Connector.CONNECTOR;
 import static jooq.steve.db.tables.ConnectorMeterValue.CONNECTOR_METER_VALUE;
@@ -87,6 +81,30 @@ public class TransactionRepositoryImpl implements TransactionRepository {
                     .and(CONNECTOR.CHARGE_BOX_ID.equal(chargeBoxId))
                   .where(TRANSACTION.STOP_TIMESTAMP.isNull())
                   .fetch(TRANSACTION.TRANSACTION_PK);
+    }
+
+    @Override
+    public List<Integer> getActiveTransactionIdsWithoutView(String chargeBoxId) {
+        List<Integer> startTransactionIds = ctx.select(TRANSACTION_START.TRANSACTION_PK)
+                .from(TRANSACTION_START)
+                .join(CONNECTOR)
+                .on(CONNECTOR.CHARGE_BOX_ID.equal(chargeBoxId))
+                .fetch(TRANSACTION_START.TRANSACTION_PK);
+
+        List<Integer> noStopRecordFoundTransactions = new ArrayList<>();
+        for (Integer startTransactionId : startTransactionIds) {
+            Record1<Integer> transactionStopRecord = ctx.select(TRANSACTION_STOP.TRANSACTION_PK)
+                    .from(TRANSACTION_STOP)
+                    .where(TRANSACTION_STOP.TRANSACTION_PK.equal(startTransactionId))
+                    .limit(1)
+                    .fetchOne();
+
+            if (transactionStopRecord == null) {
+                noStopRecordFoundTransactions.add(startTransactionId);
+            }
+        }
+
+        return noStopRecordFoundTransactions;
     }
 
     @Override

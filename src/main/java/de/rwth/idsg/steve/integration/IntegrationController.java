@@ -94,7 +94,7 @@ public class IntegrationController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ChargingLimitResponse(false, "Charge box " + chargeBoxId + " is not connected"));
         }
 
-        List<Integer> activeTransactionIds = transactionRepository.getActiveTransactionIds(chargeBoxId);
+        List<Integer> activeTransactionIds = transactionRepository.getActiveTransactionIdsWithoutView(chargeBoxId);
         if (activeTransactionIds.isEmpty()) {
             log.warn("[chargeBoxId={}, connectorId={}] No active transaction for chargeBoxId on this connector",chargeBoxId, connectorId);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ChargingLimitResponse(false, "No active transaction for chargeBoxId " + chargeBoxId + " on connector " + connectorId));
@@ -250,7 +250,7 @@ public class IntegrationController {
             return ResponseEntity.badRequest().build();
         }
 
-        List<Integer> activeTransactionIds = transactionRepository.getActiveTransactionIds(chargeBoxId);
+        List<Integer> activeTransactionIds = transactionRepository.getActiveTransactionIdsWithoutView(chargeBoxId);
 
         if (activeTransactionIds.isEmpty()) {
             log.warn("[chargeBoxId={}] No active transactions for charge box", chargeBoxId);
@@ -350,7 +350,7 @@ public class IntegrationController {
             return ResponseEntity.badRequest().body(false);
         }
 
-        List<Integer> activeTransactions = transactionRepository.getActiveTransactionIds(chargeBoxId);
+        List<Integer> activeTransactions = transactionRepository.getActiveTransactionIdsWithoutView(chargeBoxId);
 
         chargePointSelectList.add(chargePointSelect);
         if (!activeTransactions.isEmpty()) {

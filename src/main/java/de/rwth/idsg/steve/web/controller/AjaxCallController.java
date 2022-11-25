@@ -85,7 +85,7 @@ public class AjaxCallController {
     @RequestMapping(value = TRANSACTION_IDS_PATH)
     public void getTransactionIds(@PathVariable("chargeBoxId") String chargeBoxId,
                                   HttpServletResponse response) throws IOException {
-        String s = serializeArray(transactionRepository.getActiveTransactionIds(chargeBoxId));
+        String s = serializeArray(transactionRepository.getActiveTransactionIdsWithoutView(chargeBoxId));
         writeOutput(response, s);
     }
 
