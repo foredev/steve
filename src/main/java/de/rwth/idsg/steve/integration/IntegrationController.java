@@ -10,6 +10,7 @@ import de.rwth.idsg.steve.ocpp.OcppTransport;
 import de.rwth.idsg.steve.ocpp.RequestResult;
 import de.rwth.idsg.steve.ocpp.task.GetConfigurationTask;
 import de.rwth.idsg.steve.ocpp.task.RemoteStartTransactionTask;
+import de.rwth.idsg.steve.ocpp.task.RemoteStopTransactionTask;
 import de.rwth.idsg.steve.repository.ChargePointRepository;
 import de.rwth.idsg.steve.repository.ChargingProfileRepository;
 import de.rwth.idsg.steve.repository.TaskStore;
@@ -343,6 +344,8 @@ public class IntegrationController {
     public ResponseEntity<Boolean> startTransaction(@PathVariable String chargeBoxId, @PathVariable int connectorId, @PathVariable String tag) throws InterruptedException {
         List<ChargePointSelect> chargePointSelectList = new ArrayList<>();
         ChargePointSelect chargePointSelect = new ChargePointSelect(OcppTransport.JSON, chargeBoxId);
+        chargePointSelectList.add(chargePointSelect);
+
         boolean connected = chargePointHelperService.isConnected(chargeBoxId);
 
         if (!connected) {
@@ -353,10 +356,35 @@ public class IntegrationController {
         List<Integer> activeTransactions = transactionRepository.getActiveTransactionIdsWithoutView(chargeBoxId);
 
         if (!activeTransactions.isEmpty()) {
-            for (Integer transaction : activeTransactions) {
-                if (transactionRepository.getDetailsWithoutMeterValues(transaction).getTransaction().getConnectorId() == connectorId) {
-                    log.warn("[chargeBoxId={}, connectorId={}, transactionId={}] Transaction already active", chargeBoxId, connectorId, transaction);
-                    return ResponseEntity.badRequest().body(false);
+            for (Integer transactionId : activeTransactions) {
+                Integer transactionConnectorId = transactionRepository.getTransactionConnectorId(transactionId);
+                if (connectorId == transactionConnectorId) {
+                    RemoteStopTransactionParams params = new RemoteStopTransactionParams();
+                    params.setTransactionId(transactionId);
+                    params.setChargePointSelectList(chargePointSelectList);
+
+                    log.warn("[chargeBoxId={}, connectorId={}, transactionId={}] Transaction already active, trying to stop", chargeBoxId, connectorId, transactionId);
+                    int taskId = client16.remoteStopTransaction(params);
+
+                    Thread.sleep(5000);
+
+                    RemoteStopTransactionTask task = (RemoteStopTransactionTask) taskStore.get(taskId);
+
+                    Map<String, RequestResult> resultMap = task.getResultMap();
+                    RequestResult requestResult = resultMap.get(chargeBoxId);
+
+                    String response = requestResult.getResponse();
+                    String errorMessage = requestResult.getErrorMessage();
+
+                    log.info("[chargeBoxId={}, connectorId={}, transactionId={}] RemoteStopTransaction response was {}", chargeBoxId, connectorId, transactionId, response);
+
+                    if (response.equals("Accepted")) {
+                        log.info("[chargeBoxId={}, connectorId={}, transactionId={}] Transaction stopped", chargeBoxId, connectorId, transactionId);
+                    } else if (errorMessage != null) {
+                        log.warn("[chargeBoxId={}, connectorId={}, transactionId={}] Failed to stop transaction with error {}", chargeBoxId, connectorId, transactionId, errorMessage);
+                    } else {
+                        log.warn("[chargeBoxId={}, connectorId={}, transactionId={}] Charge box rejected remote stop transaction request", chargeBoxId, connectorId, transactionId);
+                    }
                 }
             }
         }

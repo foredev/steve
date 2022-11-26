@@ -85,26 +85,15 @@ public class TransactionRepositoryImpl implements TransactionRepository {
 
     @Override
     public List<Integer> getActiveTransactionIdsWithoutView(String chargeBoxId) {
-        List<Integer> startTransactionIds = ctx.select(TRANSACTION_START.TRANSACTION_PK)
+        return ctx.select(TRANSACTION_START.TRANSACTION_PK)
                 .from(TRANSACTION_START)
                 .join(CONNECTOR)
-                .on(CONNECTOR.CHARGE_BOX_ID.equal(chargeBoxId))
-                .fetch(TRANSACTION_START.TRANSACTION_PK);
-
-        List<Integer> noStopRecordFoundTransactions = new ArrayList<>();
-        for (Integer startTransactionId : startTransactionIds) {
-            Record1<Integer> transactionStopRecord = ctx.select(TRANSACTION_STOP.TRANSACTION_PK)
-                    .from(TRANSACTION_STOP)
-                    .where(TRANSACTION_STOP.TRANSACTION_PK.equal(startTransactionId))
-                    .limit(1)
-                    .fetchOne();
-
-            if (transactionStopRecord == null) {
-                noStopRecordFoundTransactions.add(startTransactionId);
-            }
-        }
-
-        return noStopRecordFoundTransactions;
+                .on(CONNECTOR.CONNECTOR_PK.equal(TRANSACTION_START.CONNECTOR_PK))
+                .where(CONNECTOR.CHARGE_BOX_ID.equal(chargeBoxId))
+                .and(TRANSACTION_START.TRANSACTION_PK.notIn(
+                        ctx.select(TRANSACTION_STOP.TRANSACTION_PK)
+                                .from(TRANSACTION_STOP)
+                )).fetch(TRANSACTION_START.TRANSACTION_PK);
     }
 
     @Override
