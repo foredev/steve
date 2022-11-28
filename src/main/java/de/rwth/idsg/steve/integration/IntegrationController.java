@@ -359,6 +359,8 @@ public class IntegrationController {
             for (Integer transactionId : activeTransactions) {
                 Integer transactionConnectorId = transactionRepository.getTransactionConnectorId(transactionId);
                 if (connectorId == transactionConnectorId) {
+                    return ResponseEntity.badRequest().body(false);
+                    /*
                     RemoteStopTransactionParams params = new RemoteStopTransactionParams();
                     params.setTransactionId(transactionId);
                     params.setChargePointSelectList(chargePointSelectList);
@@ -385,6 +387,8 @@ public class IntegrationController {
                     } else {
                         log.warn("[chargeBoxId={}, connectorId={}, transactionId={}] Charge box rejected remote stop transaction request", chargeBoxId, connectorId, transactionId);
                     }
+
+                     */
                 }
             }
         }
